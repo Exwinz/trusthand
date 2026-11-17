@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TrustHand</title>
+<meta name="theme-color" content="#065F46">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TrustHand">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--em:#065F46;--em-l:#D1FAE5;--gold:#F59E0B;--bg:#F8FAFC;--ink:#0F172A;--mut:#64748B;--line:#E2E8F0;--red:#DC2626}
+*{box-sizing:border-box;margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.mono{font-family:'JetBrains Mono',monospace}
+button{font:inherit;cursor:pointer;border:0}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.4rem;letter-spacing:-.02em}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{background:none;padding:8px 14px;border-radius:999px;font-weight:600;color:var(--mut);font-size:.85rem}
+.seg button.on{background:var(--em);color:#fff}
+.install{background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-weight:600;font-size:.85rem}
+#stage{display:flex;gap:40px;justify-content:center;align-items:flex-start;padding:28px 16px 60px;flex-wrap:wrap}
+.cell{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cell>h2{font-size:.9rem;color:var(--mut);font-weight:600}
+.phone{width:372px;height:760px;background:var(--bg);border:10px solid var(--ink);border-radius:44px;overflow-y:auto;padding:22px 16px 28px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 50px rgba(15,23,42,.18)}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+.lbl{font-size:.8rem;color:var(--mut);font-weight:600}
+.big{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:2.3rem;letter-spacing:-.03em;margin:4px 0 10px}
+.track{height:12px;background:var(--line);border-radius:99px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--em);border-radius:99px;transition:width .5s}
+.fill.dead{background:var(--red)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font-size:.85rem}
+.pills{display:flex;gap:8px}
+.pills button{flex:1;padding:12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-weight:600}
+.pills button.on{background:var(--em);color:#fff;border-color:var(--em)}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.presets button,.preset{padding:18px 8px;border-radius:14px;background:#fff;border:2px solid var(--line);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.3rem}
+.presets button.on{border-color:var(--em);background:var(--em-l);color:var(--em)}
+input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:700 1.1rem 'JetBrains Mono',monospace;background:#fff}
+.primary{width:100%;padding:16px;border-radius:14px;background:var(--em);color:#fff;font-weight:800;font-size:1.05rem}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.stop{width:100%;padding:18px;border-radius:14px;background:var(--red);color:#fff;font-weight:800;font-size:1.1rem}
+.toggle{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.toggle b{font-size:1.05rem}
+.sw{position:relative;width:64px;height:36px;border-radius:99px;background:#CBD5E1;flex:none;transition:.2s}
+.sw::after{content:'';position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:50%;background:#fff;transition:.2s}
+.sw[aria-checked=true]{background:var(--em)}
+.sw[aria-checked=true]::after{left:32px}
+.badge{display:inline-block;padding:5px 10px;border-radius:99px;font-size:.75rem;font-weight:800}
+.b-lock{background:var(--em-l);color:var(--em)}.b-multi{background:#FEF3C7;color:#92400E}
+.b-active{background:var(--em-l);color:var(--em)}.b-dead{background:#FEE2E2;color:var(--red)}.b-idle{background:var(--line);color:var(--mut)}
+.wave{display:none;align-items:center;gap:10px;background:var(--ink);color:#fff;border-radius:14px;padding:12px 14px;font-size:.9rem;font-weight:600}
+.wave.on{display:flex}
+.wave i{display:inline-block;width:4px;height:8px;background:var(--gold);border-radius:2px;animation:w .9s infinite ease-in-out}
+.wave i:nth-child(2){animation-delay:.12s}.wave i:nth-child(3){animation-delay:.24s}.wave i:nth-child(4){animation-delay:.36s}.wave i:nth-child(5){animation-delay:.48s}
+@keyframes w{0%,100%{height:6px}50%{height:24px}}
+.seller{font-family:'JetBrains Mono',monospace;font-size:.78rem;word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px;margin-top:6px}
+.log{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px;font-size:.82rem;max-height:150px;overflow:auto}
+.log li{padding:8px 10px;border-radius:10px;background:var(--bg)}
+.log .ok{background:var(--em-l);color:var(--em)}.log .bad{background:#FEE2E2;color:var(--red)}
+.slot:empty{display:none}
+.stop.hide{display:none}
+.restore{width:100%;padding:18px;border-radius:14px;background:var(--gold);color:var(--ink);font-weight:800;font-size:1.05rem;display:none;flex-direction:column;gap:2px;align-items:center}
+.restore.on{display:flex}
+.restore small{font-weight:600;font-size:.8rem}
+.rcpt{border:1px solid var(--em);background:#fff;border-radius:16px;padding:14px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+.rcpt h3{font-size:.95rem;color:var(--em);margin-bottom:10px}
+.rcpt dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:.8rem}
+.rcpt dt{color:var(--mut)}
+.rcpt dd{margin:0;text-align:right;font-family:'JetBrains Mono',monospace;word-break:break-all}
+.alert{background:#FEF2F2;border:2px solid var(--red);border-radius:16px;padding:14px}
+.alert h3{font-size:.95rem;color:var(--red);margin-bottom:6px}
+.alert p{font-size:.85rem}
+#splash{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 50%,rgba(6,95,70,.18),rgba(6,95,70,0) 55%),#F8FAFC;transition:opacity .5s ease-in-out;cursor:pointer}
+#splash.out{opacity:0;pointer-events:none}
+#splash.fast{transition-duration:.2s}
+.lockup{display:flex;align-items:center;gap:16px;animation:rise .6s ease-out both}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+.t1{font-weight:800;font-size:2.25rem;color:var(--ink);letter-spacing:-.03em;line-height:1.05}
+.t2{font-weight:600;font-size:1rem;color:var(--em);letter-spacing:.04em;margin-top:4px}
+.frame{position:relative}
+.ohead{display:flex;align-items:center;justify-content:space-between}
+.ohead b{font-size:1.1rem;font-weight:800}
+.lockbtn{width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;font-size:1.2rem}
+.hbtns{display:flex;gap:8px}
+[hidden]{display:none!important}
+.pmodal{position:absolute;inset:10px;border-radius:34px;z-index:6;background:var(--bg);display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px;overflow-y:auto}
+body.single .pmodal{inset:0;border-radius:0}
+.pm-top{width:100%;display:flex;align-items:center;justify-content:space-between}
+.pm-top h3{font-size:1.25rem;font-weight:800}
+.icb{width:48px;height:48px;border-radius:50%;background:#fff;border:2px solid var(--ink);font-size:1.3rem;color:var(--ink)}
+.icb[aria-pressed=false]{opacity:.55}
+.steps{display:flex;align-items:center;gap:10px}
+.st{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:800 1.2rem 'JetBrains Mono',monospace;background:var(--line);color:var(--mut)}
+.st.on{background:var(--em);color:#fff;box-shadow:0 0 0 4px var(--em-l)}
+.st.done{background:#fff;color:var(--em);border:3px solid var(--em)}
+.arr{font-size:1.4rem;color:var(--mut)}
+.stat{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.stat-ic{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:2.4rem;font-weight:800;color:#fff;background:var(--em)}
+.stat-ic.fp,.stat-ic.num{background:var(--em-l);color:var(--em)}
+.stat-ic.bad{background:var(--red)}
+.stat-t{font-size:1.2rem;font-weight:800;max-width:280px;min-height:2.6em}
+.stat-t.ok{color:var(--em)}.stat-t.bad{color:var(--red)}
+.pm-sec{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%}
+.fpbtn{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;padding:22px 16px;border-radius:24px;background:var(--em);color:#fff;font-weight:800;font-size:1.1rem}
+.fpbtn:disabled{opacity:.45;cursor:not-allowed}
+.link{background:none;color:var(--em);font-weight:700;text-decoration:underline;font-size:.95rem;padding:10px}
+.dots.lg i{width:20px;height:20px}
+.bigpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:300px}
+.bigpad button{height:64px;border-radius:16px;background:#fff;border:2px solid var(--ink);font:700 1.7rem 'JetBrains Mono',monospace;color:var(--ink)}
+.bigpad button:active{background:var(--em-l)}
+.vault{position:absolute;inset:10px;border-radius:34px;z-index:5;display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 22px;text-align:center;overflow-y:auto;background:radial-gradient(circle at 50% 0%,rgba(6,95,70,.14),rgba(6,95,70,0) 60%),var(--bg);transition:opacity .3s ease,visibility .3s}
+.vault.open{opacity:0;visibility:hidden;pointer-events:none}
+.vault h3{font-size:1.25rem;font-weight:800}
+.vault p{font-size:.85rem;color:var(--mut);max-width:260px}
+.dots{display:flex;gap:14px;margin:4px 0}
+.dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--em);transition:background .15s}
+.dots i.f{background:var(--em)}
+.dots.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pad{display:grid;grid-template-columns:repeat(3,64px);gap:10px}
+.pad button{height:56px;border-radius:50%;background:#fff;border:1px solid var(--line);font:700 1.3rem 'JetBrains Mono',monospace;color:var(--ink)}
+.pad button:active{background:var(--em-l)}
+.pad button.ghost{background:none;border:0;font:600 .95rem 'Plus Jakarta Sans',sans-serif;color:var(--mut)}
+.pmsg{min-height:1.2em;font-size:.8rem;color:var(--red);font-weight:600}
+.vcap{font-size:.75rem;color:var(--mut)}
+.bio{display:flex;align-items:center;justify-content:center;gap:10px}
+body.single .vault{inset:0;border-radius:0}
+body.single .frame,body.single #helper{width:min(calc(100vw - 32px),400px)}
+body.single #owner{width:100%}
+.tabs{display:none}
+body.single .tabs{display:inline-flex}
+body.single .phone{width:min(100%,400px);height:auto;min-height:calc(100vh - 160px);border-width:0;border-radius:0;box-shadow:none;background:transparent}
+body.single .cell>h2{display:none}
+body.single[data-tab=owner] #cell-helper,body.single[data-tab=helper] #cell-owner{display:none}
+#modal{position:fixed;inset:0;background:rgba(15,23,42,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:9}
+#modal.on{display:flex}
+#modal .card{max-width:380px;padding:24px}
+#modal ol{margin:12px 0 18px 20px;line-height:1.7}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#offline{display:none;position:fixed;inset:0;z-index:30;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+html.offline body>*:not(#offline):not(script){display:none!important}
+html.offline #offline{display:flex}
+.off-card{background:#fff;border:2px solid var(--ink);border-radius:24px;padding:28px 22px;max-width:380px;width:100%;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 10px 30px rgba(15,23,42,.12)}
+.off-card h2{font-size:1.6rem;font-weight:800;color:var(--ink)}
+.off-card p{font-size:1rem;color:var(--ink)}
+.off-msg{min-height:1.2em;color:var(--red);font-weight:700;font-size:.9rem}
+.off-retry{width:100%;min-height:64px;border-radius:16px;background:var(--em);color:#fff;font-weight:800;font-size:1.25rem}
+.off-retry:disabled{opacity:.6;cursor:wait}
+.edlink{display:inline-flex;align-items:center;min-height:44px;padding:10px 16px;border-radius:999px;background:#fff;border:2px solid var(--em);color:var(--em);font-weight:700;font-size:.85rem;text-decoration:none}
+.edlink:hover{background:var(--em-l)}
+.edfoot{text-align:center;padding:0 16px 40px}
+a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+</style>
+</head>
+<body class="split" data-tab="owner">
+<div id="splash" tabindex="0" role="button" aria-label="TrustHand by Twostack. Press to continue.">
+  <div class="lockup">
+    <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#065F46"/><path d="M13.4 11.5h37.2V32C50.6 44 42 50 32 55 22 50 13.4 44 13.4 32z" fill="none" stroke="#F59E0B" stroke-width="3.5" stroke-linejoin="round"/><circle cx="32" cy="23.7" r="4.8" fill="#FFFFFF"/><path d="M19.2 32Q32 48.6 44.8 32" fill="none" stroke="#FFFFFF" stroke-width="3.2"/></svg>
+    <div><div class="t1">TrustHand</div><div class="t2">by Twostack</div></div>
+  </div>
+</div>
+<header>
+  <div class="brand">
+    <svg width="40" height="40" viewBox="0 0 64 64" role="img" aria-label="TrustHand logo"><rect width="64" height="64" rx="14" fill="#065F46"/><path d="M13.4 11.5h37.2V32C50.6 44 42 50 32 55 22 50 13.4 44 13.4 32z" fill="none" stroke="#F59E0B" stroke-width="3.5" stroke-linejoin="round"/><circle cx="32" cy="23.7" r="4.8" fill="#FFFFFF"/><path d="M19.2 32Q32 48.6 44.8 32" fill="none" stroke="#FFFFFF" stroke-width="3.2"/></svg>
+    TrustHand
+  </div>
+  <div class="bar">
+    <div class="seg" id="viewSeg"><button data-v="split" class="on">Split Demo View</button><button data-v="single">Single Phone View</button></div>
+    <div class="seg tabs" id="tabSeg"><button data-t="owner" class="on">Owner</button><button data-t="helper">Helper</button></div>
+    <a class="edlink" href="/live.html" aria-label="Switch to Two-Device Edition">Switch to Two-Device Edition →</a>
+    <button class="install" id="installBtn">Install App</button>
+  </div>
+</header>
+
+<main id="stage">
+  <section class="cell" id="cell-owner"><h2>Owner phone</h2>
+    <div class="frame"><div class="phone" id="owner">
+      <div class="ohead"><b>Owner</b><div class="hbtns"><button class="lockbtn" id="lockBtn" aria-label="Lock Owner vault">🔒</button><button class="lockbtn" id="pinBtn" aria-label="Change PIN">🔑</button></div></div>
+      <div class="card">
+        <div class="row" style="margin:0 0 4px"><span class="lbl">Helper spending limit</span><span class="badge b-idle" id="o-status">No errand</span></div>
+        <div class="big" id="o-remaining">€0</div>
+        <div class="track"><div class="fill" id="o-bar"></div></div>
+        <div class="row"><span>Spent <b class="mono" id="o-spent">€0</b></span><span>Limit <b class="mono" id="o-cap">€0</b></span></div>
+      </div>
+      <div class="pills" role="group" aria-label="Language"><button data-l="en" class="on">English</button><button data-l="pidgin">Pidgin</button></div>
+      <div class="presets"><button data-cap="20" class="on">€20</button><button data-cap="50">€50</button></div>
+      <div><label class="lbl" for="o-custom">Or enter a limit (1–50)</label><input id="o-custom" type="number" min="1" max="50" step="1" inputmode="numeric" placeholder="20"></div>
+      <div class="card toggle">
+        <div><b>Auto-lock after 1st payment</b><div style="margin-top:6px"><span class="badge b-lock" id="o-mode">Single-Errand Auto-Lock</span></div></div>
+        <button class="sw" id="lockSw" role="switch" aria-checked="true" aria-label="Auto-lock after first payment"></button>
+      </div>
+      <button class="primary" id="setBtn">Set limit and approve</button>
+      <div class="wave" id="wave" aria-live="polite"><span><i></i><i></i><i></i><i></i><i></i></span>Playing spoken receipt</div>
+      <div class="slot" id="o-alert"></div>
+      <div class="slot" id="o-receipt"></div>
+      <button class="restore" id="restoreBtn">Undo Block — Restore Helper Access<small id="restoreAmt"></small></button>
+      <button class="stop" id="stopBtn">Stop Helper Access</button>
+    </div>
+    <div class="vault" id="vault" role="dialog" aria-labelledby="vt">
+      <svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4l24 9v18c0 15-10 25-24 29C18 56 8 46 8 31V13z" fill="#065F46"/><rect x="22" y="29" width="20" height="15" rx="3" fill="#fff"/><path d="M26 29v-5a6 6 0 0 1 12 0v5" fill="none" stroke="#F59E0B" stroke-width="3.5" stroke-linecap="round"/></svg>
+      <h3 id="vt">Owner Vault Locked</h3>
+      <p>Verify identity to manage spending limits or undo blocks</p>
+      <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+      <div class="pmsg" id="pmsg" role="alert"></div>
+      <div class="pad" id="pad"></div>
+      <div class="vcap" id="pinHint">Demo PIN: 1234</div>
+      <button class="primary bio" id="bioBtn"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 11a7 7 0 0 1 14 0"/><path d="M8 13a4 4 0 0 1 8 0c0 3 .5 5 1.5 7"/><path d="M12 12v2c0 2 .3 4 1 6"/><path d="M8.5 20c-.8-2-.5-4-.5-7"/></svg><span id="bioLbl">Register &amp; Unlock with Touch ID</span></button>
+      <div class="vcap" id="bioNote"></div>
+    </div>
+    <div class="pmodal" id="pmodal" role="dialog" aria-modal="true" aria-labelledby="pmt" hidden>
+      <div class="pm-top"><h3 id="pmt">Change PIN</h3><div class="hbtns"><button class="icb" id="pmSound" aria-pressed="true" aria-label="Voice and sound on">🔊</button><button class="icb" id="pmClose" aria-label="Close Change PIN">✕</button></div></div>
+      <div class="steps"><span class="st">1</span><span class="arr" aria-hidden="true">→</span><span class="st">2</span><span class="arr" aria-hidden="true">→</span><span class="st">3</span></div>
+      <div class="stat"><div class="stat-ic fp" id="pmIcon" aria-hidden="true"></div><div class="stat-t" id="pmText" role="status" aria-live="assertive"></div></div>
+      <div class="pm-sec" id="pmAuth">
+        <button class="fpbtn" id="pmFp"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 11a7 7 0 0 1 14 0"/><path d="M8 13a4 4 0 0 1 8 0c0 3 .5 5 1.5 7"/><path d="M12 12v2c0 2 .3 4 1 6"/><path d="M8.5 20c-.8-2-.5-4-.5-7"/></svg><span id="pmFpLabel">Verify Touch ID to Change PIN</span></button>
+        <button class="link" id="pmUsePin">Type my current PIN instead</button>
+        <button class="link" id="pmReset">Reset Touch ID on this device</button>
+      </div>
+      <div class="pm-sec" id="pmEntry" hidden>
+        <div class="dots lg" id="pmDots"><i></i><i></i><i></i><i></i></div>
+        <div class="bigpad" id="pmPad"></div>
+        <button class="link" id="pmUseFp">Use fingerprint instead</button>
+      </div>
+      <div class="pm-sec" id="pmDone" hidden><button class="primary" id="pmDoneBtn">Done</button></div>
+    </div>
+    </div>
+  </section>
+
+  <section class="cell" id="cell-helper"><h2>Helper phone</h2>
+    <div class="phone" id="helper">
+      <div class="card">
+        <span class="lbl">Allowance left</span>
+        <div class="big" id="h-remaining">€0</div>
+        <span class="badge b-idle" id="h-status">Waiting for Owner</span>
+        <div style="margin-top:8px"><span class="badge b-lock" id="h-mode">Single-Errand Auto-Lock</span></div>
+      </div>
+      <div class="card"><span class="lbl">Verified seller</span><div class="seller" id="h-seller">$ilp.interledger-test.dev/trusthand-seller</div></div>
+      <div class="presets" style="grid-template-columns:1fr" id="h-presets">
+        <button class="preset" data-amt="12">€12 Pharmacy Errand</button>
+        <button class="preset" data-amt="8">€8 Second Shop Test</button>
+        <button class="preset" data-amt="25">€25 Overspend Test</button>
+      </div>
+      <div><label class="lbl" for="h-amt">Custom amount in EUR (1–50)</label><input id="h-amt" type="number" min="1" max="50" step="1" inputmode="numeric" placeholder="12"></div>
+      <button class="primary" id="payBtn">Pay seller</button>
+      <div class="slot" id="h-alert"></div>
+      <div class="slot" id="h-receipt"></div>
+      <div class="card"><span class="lbl">Activity</span><ul class="log" id="log" style="margin-top:8px"><li>No activity yet.</li></ul></div>
+    </div>
+  </section>
+</main>
+
+<footer class="edfoot"><a class="edlink" href="/live.html" aria-label="Switch to Two-Device Edition">Switch to Two-Device Edition →</a></footer>
+
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="card">
+    <h3 id="mt">Install TrustHand</h3>
+    <ol id="mSteps">
+      <li>Tap the <b>Share</b> button in Safari.</li>
+      <li>Choose <b>Add to Home Screen</b>.</li>
+      <li>Tap <b>Add</b>.</li>
+    </ol>
+    <button class="primary" id="mClose">Got it</button>
+  </div>
+</div>
+
+<div id="offline" role="alert">
+  <div class="off-card">
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></svg>
+    <h2>No internet connection</h2>
+    <p>Active internet is required to connect to Interledger wallets</p>
+    <div class="off-msg" id="offMsg" aria-live="polite"></div>
+    <button class="off-retry" id="retryBtn">Retry</button>
+  </div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const state = { lang: 'en', cap: 20, autoLock: true, status: {}, selected: null, timer: null };
+
+// ---------- Audio queue ----------
+let queueId = 0, current = null;
+function numberToFiles(n) {
+  n = Math.max(0, Math.min(59, Math.round(n)));
+  if (n <= 20 || n % 10 === 0) return [`${n}.mp3`];
+  return [`${Math.floor(n / 10) * 10}.mp3`, `${n % 10}.mp3`];
+}
+function playOne(src) {
+  return new Promise((resolve) => {
+    const a = new Audio(src); current = a;
+    a.onended = () => resolve(true);
+    a.onerror = () => resolve(false);
+    a.play().catch(() => resolve(false));
+  });
+}
+function speak(text) {
+  if (!('speechSynthesis' in window) || !text) return Promise.resolve();
+  return new Promise((res) => {
+    speechSynthesis.cancel();
+    const u = makeUtterance(text);
+    u.onend = u.onerror = res;
+    speechSynthesis.speak(u);
+  });
+}
+// ---------- Spoken prompts: ElevenLabs clips first; browser voice only if a clip is missing ----------
+const CLIPS = {
+  'Who are you? Tap Owner, or tap Helper.': 'role_prompt.mp3',
+  'Type your name, then tap the green button': 'setup_step1.mp3',
+  'Keep your vault safe. Use your fingerprint, or tap 4 numbers': 'setup_step2.mp3',
+  'This is your pairing code. Give it to your helper': 'setup_step3.mp3',
+  'Fingerprint saved': 'fingerprint_saved.mp3',
+  'Verify fingerprint': 'verify_fingerprint.mp3',
+  'Tap your current 4 numbers': 'pin_current.mp3',
+  'Tap 4 new numbers': 'pin_new.mp3',
+  'Tap the same 4 numbers again': 'pin_confirm.mp3',
+  'New PIN saved': 'pin_saved.mp3',
+  'Numbers did not match. Tap 4 new numbers.': 'pin_mismatch.mp3',
+  'Wrong PIN. Try again.': 'pin_wrong.mp3',
+  'Type your name and the 6 numbers from the owner': 'helper_link.mp3',
+  'Voice on': 'voice_on.mp3',
+  'Delete': 'delete.mp3',
+  'Your pairing code is': 'pairing_code_is.mp3',
+  'Please type your name': 'type_name.mp3',
+  'Type your name first.': 'type_your_name_first.mp3',
+  'Enter all 6 numbers of the pairing code.': 'enter_6_digits.mp3',
+  'Type your helper name': 'type_helper_name.mp3',
+  'Touch ID removed': 'touch_id_removed.mp3',
+  'Could not save. Try again.': 'save_failed.mp3',
+  'Could not save the PIN on this device': 'pin_save_failed.mp3',
+  'Could not add helper.': 'helper_add_failed.mp3',
+  'Could not connect.': 'connect_failed.mp3',
+  'Touch ID was cancelled or timed out. Try again.': 'touch_id_cancelled.mp3',
+  "Touch ID didn't work. Use your PIN.": 'touch_id_failed.mp3',
+  'Invalid pairing code': 'invalid_code.mp3',
+  'Access was removed by the owner.': 'access_removed.mp3',
+  'Too many wrong codes. Wait a minute and try again.': 'too_many_codes.mp3',
+  'Owner name is required.': 'owner_name_required.mp3',
+  'Helper name is required.': 'helper_name_required.mp3',
+  'Linked to owner': 'linked_to_owner.mp3',
+  'Helper added': 'helper_added.mp3',
+};
+for (let i = 0; i < 10; i++) CLIPS[String(i)] = i + '.mp3'; // single digits: PIN taps and pairing-code readout
+// Tolerant lookup: case, spacing and punctuation differences still find the right clip.
+const normClip = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const CLIPS_N = {};
+Object.keys(CLIPS).forEach((k) => { CLIPS_N[normClip(k)] = CLIPS[k]; });
+const noClipLogged = new Set();
+function clipFor(text) {
+  const f = CLIPS[text] ?? CLIPS_N[normClip(text)];
+  if (f == null && !noClipLogged.has(text)) { noClipLogged.add(text); console.info('[voice] no recorded clip for:', text); }
+  return f;
+}
+let vGen = 0, vChain = Promise.resolve(), vSource = null;
+function stopVoice() {
+  vGen++; vChain = Promise.resolve();
+  if (vSource) { try { vSource.stop(); } catch (e) {} vSource = null; }
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+// Clips are decoded through the Web Audio engine: once the first tap has unlocked it, playback no longer
+// depends on a fresh user gesture (e.g. the prompt that follows a network request), and clips are preloaded.
+const clipBuf = new Map();
+function loadClip(file) {
+  if (!clipBuf.has(file)) {
+    clipBuf.set(file, fetch('/sounds/' + file, { cache: 'no-cache' })
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then((b) => new Promise((res, rej) => audioCtx().decodeAudioData(b, res, rej)))
+      .catch((e) => { clipBuf.delete(file); throw e; })); // failures are not remembered, so a clip added later is picked up
+  }
+  return clipBuf.get(file);
+}
+let warmed = false;
+function warmClips() { // preload every prompt clip after the first tap so none waits on the network
+  if (warmed) return;
+  warmed = true;
+  new Set(Object.values(CLIPS)).forEach((f) => loadClip(f).catch(() => {}));
+}
+async function playClip(file) {
+  try {
+    const ctx = audioCtx();
+    if (ctx.state !== 'running') await Promise.race([ctx.resume(), new Promise((r) => setTimeout(r, 400))]);
+    if (ctx.state !== 'running') throw new Error('audio is still locked (needs a tap first)');
+    const buf = await Promise.race([loadClip(file), new Promise((_, rej) => setTimeout(() => rej(new Error('load timeout')), 6000))]);
+    return await new Promise((resolve) => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf; src.connect(ctx.destination);
+      vSource = src;
+      const guard = setTimeout(() => resolve(true), buf.duration * 1000 + 1500);
+      src.onended = () => { clearTimeout(guard); resolve(true); };
+      src.start();
+    });
+  } catch (e) {
+    console.warn('Voice clip problem:', file, e && e.message); // the caller falls back to the browser voice for this prompt
+    return false;
+  }
+}
+// Fallback voice (only used when a clip is missing): prefer a natural/enhanced voice, calm and warm.
+const PREFERRED_VOICES = ['Google UK English Female', 'Serena', 'Samantha', 'Daniel', 'Microsoft Aria'];
+function pickVoice() {
+  if (!('speechSynthesis' in window)) return null;
+  const en = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
+  for (const name of PREFERRED_VOICES) {
+    const hits = en.filter((v) => v.name.includes(name));
+    if (hits.length) return hits.find((v) => /natural|enhanced|premium/i.test(v.name)) || hits[0];
+  }
+  return null;
+}
+function makeUtterance(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  const v = pickVoice();
+  if (v) { u.voice = v; u.lang = v.lang; } else u.lang = state.lang === 'en' ? 'en-NG' : 'en-GB';
+  u.rate = 0.94; u.pitch = 0.98;
+  return u;
+}
+if ('speechSynthesis' in window) { try { speechSynthesis.getVoices(); } catch (e) {} } // voices load lazily in some browsers
+function browserVoice(text) {
+  if (!text || !('speechSynthesis' in window)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const u = makeUtterance(text);
+    u.onend = u.onerror = resolve;
+    speechSynthesis.speak(u);
+    setTimeout(resolve, 8000);
+  });
+}
+// parts: [{ file, text }] or { pause: ms }. queue=false interrupts whatever is speaking.
+function voiceParts(parts, queue) {
+  if (!queue) stopVoice();
+  const gen = vGen;
+  vChain = vChain.then(async () => {
+    for (const p of parts) {
+      if (gen !== vGen) return;
+      try {
+        if (typeof p.pause === 'number') { await new Promise((r) => setTimeout(r, p.pause)); continue; }
+        const ok = p.file != null ? await playClip(p.file) : false;
+        if (gen !== vGen) return;
+        if (!ok) await browserVoice(p.text); // clip missing or stuck: browser voice for this one, then carry on
+      } catch (e) { console.warn('Voice step failed:', p.file, e); } // never abandon the rest of the sequence
+    }
+  }).catch(() => {}); // a failure can never poison later prompts
+}
+const speakPrompt = (text, queue, file) => voiceParts([{ file: file ?? clipFor(text), text }], queue);
+
+async function playQueue(files, fallbackText) {
+  const id = ++queueId;
+  stopVoice(); // a payment announcement takes over from any prompt
+  if (current) current.pause();
+  speechSynthesis && speechSynthesis.cancel();
+  $('#wave').classList.add('on');
+  for (const f of files) {
+    if (id !== queueId) return;
+    const ok = await playOne('/sounds/' + f);
+    if (!ok) { if (id === queueId) await speak(fallbackText); break; }
+  }
+  if (id === queueId) $('#wave').classList.remove('on');
+}
+// ---------- Web Audio sound effects (no audio files) ----------
+let actx;
+function audioCtx() {
+  actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(freq, at, dur, type, vol) {
+  const c = audioCtx(), o = c.createOscillator(), g = c.createGain(), t = c.currentTime + at;
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+const after = (ms) => new Promise((r) => setTimeout(r, ms));
+async function playSuccessPing() { // 880Hz -> 1318Hz, ~0.35s
+  try { tone(880, 0, 0.17, 'sine', 0.28); tone(1318, 0.17, 0.18, 'sine', 0.28); } catch (e) {}
+  await after(350);
+}
+async function playBlockedBuzzer() { // two 140ms pulses at 150Hz
+  try { tone(150, 0, 0.14, 'sawtooth', 0.2); tone(150, 0.2, 0.14, 'sawtooth', 0.2); } catch (e) {}
+  await after(350);
+}
+['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, () => { try { audioCtx(); warmClips(); } catch (e) {} }, { passive: true }));
+
+function announce(ev, d = {}) {
+  const lang = state.lang, pid = lang === 'pidgin';
+  const T = {
+    grant_set: pid ? `Helper fit spend up to ${d.cap} euros.` : `Helper limit set to ${d.cap} euros.`,
+    payment_sent: (pid ? 'Payment don go. ' : 'Payment sent. ') + `${d.spent} euros spent, ${d.remaining} euros remaining.` + (d.autoLocked ? ' Auto locked.' : ''),
+    payment_blocked: pid ? 'Payment no pass. E dey blocked.' : 'Payment blocked.',
+    access_stopped: pid ? 'Helper access don stop.' : 'Helper access stopped.',
+  }[ev];
+  const F = {
+    grant_set: [`grant_set_${lang}.mp3`, ...numberToFiles(d.cap || 0), 'euros_limit.mp3'],
+    payment_sent: [`payment_sent_${lang}.mp3`, ...numberToFiles(d.spent || 0), 'euros_spent.mp3', ...numberToFiles(d.remaining || 0), 'euros_remaining.mp3', ...(d.autoLocked ? ['auto_locked.mp3'] : [])],
+    payment_blocked: [`payment_blocked_${lang}.mp3`],
+    access_stopped: [`access_stopped_${lang}.mp3`],
+  }[ev];
+  return playQueue(F, T);
+}
+
+// ---------- Rendering ----------
+const fmt = (n) => '€' + (Number.isInteger(n) ? n : n.toFixed(2));
+function setBadge(el, text, cls) { el.textContent = text; el.className = 'badge ' + cls; }
+function render(s) {
+  state.status = s;
+  const dead = ['REVOKED', 'AUTO_LOCKED'].includes(s.status);
+  const shown = s.status === 'NONE' || s.status === 'PENDING' ? state.autoLock : s.autoLock;
+  $('#o-remaining').textContent = fmt(s.remaining || 0);
+  $('#o-spent').textContent = fmt(s.spent || 0);
+  $('#o-cap').textContent = fmt(s.cap || 0);
+  const pct = s.cap ? Math.min(100, (s.spent / s.cap) * 100) : 0;
+  const bar = $('#o-bar'); bar.style.width = pct + '%'; bar.classList.toggle('dead', dead);
+  const label = { NONE: ['No errand', 'b-idle'], PENDING: ['Waiting for approval', 'b-idle'], ACTIVE: ['Active', 'b-active'], REVOKED: ['Access stopped', 'b-dead'], AUTO_LOCKED: ['Auto-locked', 'b-dead'] }[s.status] || ['—', 'b-idle'];
+  setBadge($('#o-status'), label[0], label[1]);
+  setBadge($('#h-status'), s.status === 'NONE' ? 'Waiting for Owner' : label[0], s.status === 'NONE' ? 'b-idle' : label[1]);
+  $('#h-remaining').textContent = fmt(s.remaining || 0);
+  for (const id of ['#o-mode', '#h-mode']) setBadge($(id), shown ? 'Single-Errand Auto-Lock' : 'Multi-Stop Mode', shown ? 'b-lock' : 'b-multi');
+  if (s.seller) $('#h-seller').textContent = s.seller;
+  $('#payBtn').disabled = s.status !== 'ACTIVE';
+  renderCards(s);
+  renderRestore(s);
+}
+function log(text, cls = '') {
+  const ul = $('#log'); if (ul.firstChild && ul.firstChild.textContent === 'No activity yet.') ul.innerHTML = '';
+  const li = document.createElement('li'); li.className = cls;
+  li.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '  ' + text;
+  ul.prepend(li);
+}
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : undefined);
+  return { status: r.status, data: await r.json().catch(() => ({})) };
+}
+async function refresh() { const { data } = await api('/api/status'); render(data); return data; }
+
+// ---------- Receipt, blocked alert and restore ----------
+const REASONS = {
+  LIMIT_EXCEEDED: 'Over the spending limit',
+  REVOKED: 'Helper access was stopped',
+  AUTO_LOCKED: 'Auto-locked after the first payment',
+  PAYMENT_FAILED: 'The payment could not be completed',
+};
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+const cardKeys = {};
+function renderCards(s) {
+  const r = s.lastReceipt, b = s.lastBlocked;
+  const rk = r ? r.txId : '', bk = b ? b.timestamp : '';
+  if (cardKeys.r !== rk) {
+    cardKeys.r = rk;
+    for (const id of ['#o-receipt', '#h-receipt']) {
+      const slot = $(id); slot.replaceChildren();
+      if (!r) continue;
+      const card = el('div', 'rcpt'), dl = el('dl');
+      card.append(el('h3', '', '✓ Verified Open Payments Receipt'));
+      [['Paid', fmt(r.amountEur)],
+       ['Seller received', r.settledUsd == null ? '—' : '$' + r.settledUsd.toFixed(2) + ' USD'],
+       ['Seller', r.seller],
+       ['Remaining', fmt(r.remainingEur)],
+       ['Auto-lock', r.autoLocked ? 'Engaged' : 'Off'],
+       ['Time', new Date(r.timestamp).toLocaleString()],
+       ['Transaction', r.txId]].forEach(([k, v]) => dl.append(el('dt', '', k), el('dd', '', v)));
+      card.append(dl); slot.append(card);
+    }
+  }
+  if (cardKeys.b !== bk) {
+    cardKeys.b = bk;
+    for (const id of ['#o-alert', '#h-alert']) {
+      const slot = $(id); slot.replaceChildren();
+      if (!b) continue;
+      const card = el('div', 'alert');
+      card.append(el('h3', '', 'Blocked Transaction Alert'),
+        el('p', '', `${fmt(b.amountEur)} was rejected: ${REASONS[b.reason] || 'Payment failed'}. No money moved.`),
+        el('p', 'mono', new Date(b.timestamp).toLocaleTimeString()));
+      slot.append(card);
+    }
+  }
+}
+function restoreCap(s) {
+  const rem = Math.floor(s.remaining || 0);
+  return Math.min(50, Math.max(1, rem >= 1 ? rem : Math.round(s.cap || state.cap)));
+}
+function renderRestore(s) {
+  const dead = s.status === 'REVOKED' || s.status === 'AUTO_LOCKED';
+  $('#restoreBtn').classList.toggle('on', dead);
+  $('#stopBtn').classList.toggle('hide', dead);
+  $('#restoreAmt').textContent = `Approve a new ${fmt(restoreCap(s))} limit`;
+}
+
+// ---------- Owner actions ----------
+document.querySelectorAll('[data-l]').forEach((b) => b.onclick = () => {
+  state.lang = b.dataset.l;
+  document.querySelectorAll('[data-l]').forEach((x) => x.classList.toggle('on', x === b));
+});
+document.querySelectorAll('[data-cap]').forEach((b) => b.onclick = () => {
+  state.cap = +b.dataset.cap; $('#o-custom').value = '';
+  document.querySelectorAll('[data-cap]').forEach((x) => x.classList.toggle('on', x === b));
+});
+$('#o-custom').oninput = (e) => {
+  const v = +e.target.value;
+  if (Number.isInteger(v) && v >= 1 && v <= 50) { state.cap = v; document.querySelectorAll('[data-cap]').forEach((x) => x.classList.remove('on')); }
+};
+$('#lockSw').onclick = () => {
+  state.autoLock = !state.autoLock;
+  $('#lockSw').setAttribute('aria-checked', state.autoLock);
+  render(state.status);
+};
+async function startGrant(cap, autoLock) {
+  const { status, data } = await api('/api/grant', { cap, durationHours: 24, autoLock });
+  if (status !== 200) { log('Could not set limit: ' + (data.error || 'error'), 'bad'); return; }
+  render(data);
+  if (data.redirectUrl) {
+    window.open(data.redirectUrl, 'approve', 'width=480,height=720') || (location.href = data.redirectUrl);
+    log('Waiting for Owner approval in wallet…');
+    pollGrant();
+  } else grantReady();
+}
+$('#setBtn').onclick = () => startGrant(state.cap, state.autoLock);
+$('#restoreBtn').onclick = () => startGrant(restoreCap(state.status), state.status.autoLock !== false);
+function pollGrant() {
+  clearInterval(state.timer); let n = 0;
+  state.timer = setInterval(async () => {
+    const s = await refresh();
+    if (s.status === 'ACTIVE') { clearInterval(state.timer); grantReady(); }
+    else if (++n > 90 || s.status === 'NONE') clearInterval(state.timer);
+  }, 2000);
+}
+function grantReady() { log(`Limit set: ${fmt(state.status.cap)}`, 'ok'); announce('grant_set', { cap: state.status.cap }); }
+window.addEventListener('message', (e) => { if (e.data && e.data.trusthand === 'granted') pollGrant(); });
+$('#stopBtn').onclick = async () => {
+  const { data } = await api('/api/revoke', {}); render(data);
+  log('Owner stopped Helper access.', 'bad'); announce('access_stopped');
+};
+
+// ---------- Helper actions ----------
+document.querySelectorAll('[data-amt]').forEach((b) => b.onclick = () => { $('#h-amt').value = b.dataset.amt; });
+$('#payBtn').onclick = async () => {
+  const amount = +$('#h-amt').value;
+  if (!Number.isInteger(amount) || amount < 1 || amount > 50) return log('Enter a whole amount from 1 to 50 EUR.', 'bad');
+  $('#payBtn').disabled = true;
+  const { status, data } = await api('/api/pay', { amount });
+  render(data);
+  if (status === 200 && data.ok) {
+    log(`Paid ${fmt(amount)} to seller.` + (data.autoLocked ? ' Auto-lock engaged.' : ''), 'ok');
+    playSuccessPing().then(() => announce('payment_sent', { spent: amount, remaining: data.remaining, autoLocked: data.autoLocked }));
+  } else {
+    const why = { LIMIT_EXCEEDED: 'Over the limit', REVOKED: 'Access was stopped', AUTO_LOCKED: 'Auto-locked after first payment' }[data.reason] || 'Payment failed';
+    log(`Blocked ${fmt(amount)}: ${why}.`, 'bad');
+    playBlockedBuzzer().then(() => announce('payment_blocked'));
+  }
+  $('#payBtn').disabled = state.status.status !== 'ACTIVE';
+};
+
+// ---------- View switcher ----------
+$('#viewSeg').onclick = (e) => {
+  const v = e.target.dataset.v; if (!v) return;
+  document.body.className = v;
+  document.querySelectorAll('#viewSeg button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
+};
+$('#tabSeg').onclick = (e) => {
+  const t = e.target.dataset.t; if (!t) return;
+  document.body.dataset.tab = t;
+  document.querySelectorAll('#tabSeg button').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
+};
+if (matchMedia('(max-width: 800px)').matches) $('#viewSeg [data-v=single]').click();
+
+// ---------- PWA install ----------
+let deferred = null;
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+if (standalone) $('#installBtn').style.display = 'none';
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; });
+window.addEventListener('appinstalled', () => { $('#installBtn').style.display = 'none'; });
+$('#installBtn').onclick = async () => {
+  if (deferred) { deferred.prompt(); await deferred.userChoice; deferred = null; return; }
+  if (!isIOS) $('#mSteps').innerHTML = '<li>Open your browser menu.</li><li>Choose <b>Install app</b> or <b>Add to Home screen</b>.</li>';
+  $('#modal').classList.add('on');
+};
+$('#mClose').onclick = () => $('#modal').classList.remove('on');
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then((r) => r.update()).catch(() => {});
+
+// ---------- Offline gate (runs right after the splash) ----------
+async function netOk() {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 4000);
+  const ping = async (url) => {
+    const r = await fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ctl.signal });
+    if (r.type !== 'opaque') throw new Error('not a live network response'); // a service-worker fallback page is not internet
+  };
+  try {
+    await Promise.any([ping('https://ilp.interledger-test.dev/'), ping('https://www.gstatic.com/generate_204')]);
+    return true;
+  } catch (e) { return false; } finally { clearTimeout(timer); ctl.abort(); }
+}
+function gate() {
+  return new Promise((resolve) => {
+    const btn = $('#retryBtn'), msg = $('#offMsg');
+    let first = true;
+    const run = async () => {
+      btn.disabled = true; btn.textContent = 'Checking…';
+      const ok = await netOk();
+      btn.disabled = false; btn.textContent = 'Retry';
+      if (ok) { document.documentElement.classList.remove('offline'); msg.textContent = ''; resolve(); return; }
+      document.documentElement.classList.add('offline');
+      msg.textContent = first ? '' : 'Still offline. Check Wi-Fi or mobile data, then tap Retry.';
+      first = false; btn.focus();
+    };
+    btn.onclick = run; run();
+  });
+}
+
+// ---------- Splash screen ----------
+const splash = $('#splash');
+let splashGone = false;
+function dismissSplash(byUser) {
+  if (splashGone) return;
+  splashGone = true;
+  if (byUser) { try { audioCtx(); } catch (e) {} splash.classList.add('fast'); }
+  splash.classList.add('out');
+  setTimeout(() => { splash.remove(); gate(); }, byUser ? 220 : 520);
+}
+splash.addEventListener('click', () => dismissSplash(true));
+splash.addEventListener('keydown', (e) => { if (['Enter', ' ', 'Escape'].includes(e.key)) dismissSplash(true); });
+setTimeout(() => dismissSplash(false), 2000); // 0.6s rise + 1.4s hold, then 0.5s fade
+
+// ---------- Owner vault (PIN + biometric demo gate) ----------
+let pinBuf = '';
+const vault = $('#vault');
+function paintDots() { document.querySelectorAll('#dots i').forEach((d, i) => d.classList.toggle('f', i < pinBuf.length)); }
+function setLocked(locked) {
+  vault.classList.toggle('open', !locked);
+  $('#owner').inert = locked; // keeps keyboard and screen readers out of the controls while locked
+  pinBuf = ''; paintDots(); $('#pmsg').textContent = '';
+}
+function pinKey(k) {
+  if (k === 'C') pinBuf = '';
+  else if (k === 'B') pinBuf = pinBuf.slice(0, -1);
+  else if (pinBuf.length < 4) pinBuf += k;
+  $('#pmsg').textContent = ''; paintDots();
+  if (pinBuf.length !== 4) return;
+  if (pinBuf === getPin()) { setTimeout(() => setLocked(false), 150); return; }
+  $('#pmsg').textContent = 'Incorrect PIN. Try again.';
+  const d = $('#dots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake');
+  setTimeout(() => { pinBuf = ''; paintDots(); }, 350);
+}
+['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'B'].forEach((k) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = k === 'C' ? 'Clear' : k === 'B' ? '⌫' : k;
+  if (k === 'C' || k === 'B') b.className = 'ghost';
+  b.setAttribute('aria-label', k === 'C' ? 'Clear PIN' : k === 'B' ? 'Delete last digit' : 'Digit ' + k);
+  b.onclick = () => pinKey(k);
+  $('#pad').append(b);
+});
+// ---------- Touch ID (WebAuthn platform authenticator) ----------
+const CRED_KEY = 'th_cred', PIN_KEY = 'th_pin';
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+const toB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const fromB64 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const getPin = () => { const p = store.get(PIN_KEY); return /^\d{4}$/.test(p || '') ? p : '1234'; };
+const fpSvg = (size, color) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 11a7 7 0 0 1 14 0"/><path d="M8 13a4 4 0 0 1 8 0c0 3 .5 5 1.5 7"/><path d="M12 12v2c0 2 .3 4 1 6"/><path d="M8.5 20c-.8-2-.5-4-.5-7"/></svg>`;
+let bioOk = false;
+async function checkBio() {
+  try {
+    bioOk = !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials &&
+      await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+  } catch (e) { bioOk = false; }
+  refreshBio();
+}
+function refreshBio() {
+  $('#bioBtn').disabled = !bioOk;
+  $('#bioLbl').textContent = store.get(CRED_KEY) ? 'Unlock with Touch ID' : 'Register & Unlock with Touch ID';
+  $('#bioNote').textContent = bioOk ? '' : 'Touch ID needs https or localhost and a fingerprint sensor. Use your PIN.';
+}
+const updateHint = () => { $('#pinHint').hidden = !!store.get(PIN_KEY); };
+async function registerTouchId() {
+  const cred = await navigator.credentials.create({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)),
+    rp: { name: 'TrustHand', id: window.location.hostname },
+    user: { id: new TextEncoder().encode('trusthand-owner'), name: 'owner', displayName: 'TrustHand Owner' },
+    pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+    authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+    timeout: 60000,
+    attestation: 'none',
+  } });
+  if (!store.set(CRED_KEY, toB64(cred.rawId))) throw new Error('Could not save credential');
+  refreshBio();
+}
+async function verifyTouchId() {
+  const a = await navigator.credentials.get({ publicKey: {
+    challenge: crypto.getRandomValues(new Uint8Array(32)),
+    rpId: window.location.hostname,
+    allowCredentials: [{ id: fromB64(store.get(CRED_KEY)), type: 'public-key', transports: ['internal'] }],
+    userVerification: 'required',
+    timeout: 60000,
+  } });
+  // authenticatorData byte 32 holds the flags; 0x04 = user verification (fingerprint) was performed
+  if (!(new Uint8Array(a.response.authenticatorData)[32] & 0x04)) throw new Error('No fingerprint verification');
+}
+const bioError = (e) => (e && e.name === 'NotAllowedError')
+  ? 'Touch ID was cancelled or timed out. Try again.'
+  : "Touch ID didn't work. Use your PIN.";
+
+$('#bioBtn').onclick = async () => {
+  $('#bioBtn').disabled = true; $('#pmsg').textContent = '';
+  try {
+    if (store.get(CRED_KEY)) await verifyTouchId(); else await registerTouchId();
+    setLocked(false);
+  } catch (e) { $('#pmsg').textContent = bioError(e); }
+  refreshBio();
+};
+$('#lockBtn').onclick = () => setLocked(true);
+
+// ---------- Change PIN (multimodal: sight, sound, speech, touch) ----------
+const pm = { mode: 'auth', step: 1, buf: '', first: '', sound: true, t: null };
+const PROMPT = { old: 'Tap your current 4 numbers', new: 'Tap 4 new numbers', confirm: 'Tap the same 4 numbers again' };
+const pmEl = $('#pmodal');
+function say(text, queue) {
+  if (!pm.sound) return; // pmSound mute toggle
+  speakPrompt(text, queue);
+}
+const buzz = (pattern) => { try { navigator.vibrate && navigator.vibrate(pattern); } catch (e) {} };
+const clickTone = () => { if (pm.sound) { try { tone(520, 0, 0.06, 'sine', 0.12); } catch (e) {} } };
+function badTone() { if (pm.sound) { try { tone(180, 0, 0.14, 'square', 0.14); tone(180, 0.2, 0.14, 'square', 0.14); } catch (e) {} } }
+function pmStatus(kind, text) {
+  const ic = $('#pmIcon'); ic.className = 'stat-ic ' + kind;
+  const glyph = { ok: '✓', bad: '✕', num: '🔢' }[kind];
+  if (glyph) ic.textContent = glyph; else ic.innerHTML = fpSvg(40, '#065F46');
+  const t = $('#pmText'); t.textContent = text; t.className = 'stat-t ' + (kind === 'ok' || kind === 'bad' ? kind : '');
+}
+function pmRender() {
+  document.querySelectorAll('.st').forEach((c, i) => {
+    const n = i + 1;
+    c.className = 'st' + (n === pm.step ? ' on' : n < pm.step ? ' done' : '');
+    c.textContent = n < pm.step ? '✓' : String(n);
+  });
+  $('#pmAuth').hidden = pm.mode !== 'auth';
+  $('#pmEntry').hidden = pm.mode === 'auth' || pm.mode === 'saved';
+  $('#pmDone').hidden = pm.mode !== 'saved';
+  $('#pmUsePin').hidden = !!$('#pmAuth').hidden;
+  $('#pmReset').hidden = !store.get(CRED_KEY);
+  $('#pmUseFp').hidden = !(bioOk && pm.mode === 'old');
+  document.querySelectorAll('#pmDots i').forEach((d, i) => d.classList.toggle('f', i < pm.buf.length));
+}
+function pmStart() {
+  pm.mode = 'auth'; pm.step = 1; pm.buf = ''; pm.first = '';
+  $('#pmFpLabel').textContent = store.get(CRED_KEY) ? 'Verify Touch ID to Change PIN' : 'Register Touch ID to Change PIN';
+  $('#pmFp').disabled = !bioOk;
+  if (!bioOk) return pmUsePin();
+  pmStatus('fp', 'Verify fingerprint'); say('Verify fingerprint');
+  pmRender();
+}
+function pmUsePin() {
+  pm.mode = 'old'; pm.step = 1; pm.buf = '';
+  pmStatus('num', PROMPT.old); say(PROMPT.old);
+  pmRender();
+}
+function pmToNew() {
+  pm.mode = 'new'; pm.step = 2; pm.buf = ''; pm.first = '';
+  pmStatus('num', PROMPT.new); say(PROMPT.new, true);
+  pmRender();
+}
+function pmFail(text) {
+  pmStatus('bad', text); say(text, true); buzz([200, 80, 200]); badTone();
+  const d = $('#pmDots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake');
+  clearTimeout(pm.t);
+  pm.t = setTimeout(() => { if (PROMPT[pm.mode]) pmStatus('num', PROMPT[pm.mode]); }, 2200);
+}
+function pmKey(k) {
+  if (!PROMPT[pm.mode]) return;
+  if (k === 'B') { pm.buf = pm.buf.slice(0, -1); clickTone(); buzz(40); say('Delete'); pmRender(); return; }
+  if (pm.buf.length >= 4) return;
+  pm.buf += k; clickTone(); buzz(40);
+  if (pm.mode !== 'old') say(k); // the current PIN is never read aloud
+  pmRender();
+  if (pm.buf.length === 4) setTimeout(pmComplete, 250);
+}
+function pmComplete() {
+  const v = pm.buf;
+  if (pm.mode === 'old') {
+    if (v === getPin()) { buzz(40); pmToNew(); }
+    else { pm.buf = ''; pmFail('Wrong PIN. Try again.'); pmRender(); }
+  } else if (pm.mode === 'new') {
+    pm.first = v; pm.buf = ''; pm.mode = 'confirm'; pm.step = 3;
+    pmStatus('num', PROMPT.confirm); say(PROMPT.confirm, true); pmRender();
+  } else if (pm.mode === 'confirm') {
+    if (v !== pm.first) {
+      pm.buf = ''; pm.first = ''; pm.mode = 'new'; pm.step = 2;
+      pmFail('Numbers did not match. Tap 4 new numbers.'); pmRender();
+    } else if (!store.set(PIN_KEY, v)) {
+      pm.buf = ''; pmFail('Could not save the PIN on this device.'); pmRender();
+    } else {
+      pm.mode = 'saved'; pm.step = 4; pm.buf = '';
+      clearTimeout(pm.t);
+      pmStatus('ok', 'New PIN saved'); say('New PIN saved', true); buzz([100, 50, 100]);
+      if (pm.sound) playSuccessPing();
+      updateHint(); pmRender();
+      pm.t = setTimeout(pmClose, 2500);
+    }
+  }
+}
+function pmOpen() {
+  pmEl.hidden = false; $('#owner').inert = true;
+  pmStart();
+  setTimeout(() => (pm.mode === 'auth' ? $('#pmFp') : $('#pmPad button')).focus(), 50);
+}
+function pmClose() {
+  clearTimeout(pm.t); pm.mode = 'auth';
+  stopVoice();
+  pmEl.hidden = true; $('#owner').inert = false;
+  $('#pinBtn').focus();
+}
+['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'B'].forEach((k) => {
+  if (k === '') { $('#pmPad').append(document.createElement('span')); return; }
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = k === 'B' ? '⌫' : k;
+  b.setAttribute('aria-label', k === 'B' ? 'Delete last digit' : 'Digit ' + k);
+  b.onclick = () => pmKey(k);
+  $('#pmPad').append(b);
+});
+$('#pmFp').onclick = async () => {
+  const b = $('#pmFp'); b.disabled = true;
+  try {
+    if (store.get(CRED_KEY)) await verifyTouchId(); else await registerTouchId();
+    buzz(40); pmToNew();
+  } catch (e) { pmFail(bioError(e)); }
+  b.disabled = !bioOk;
+};
+$('#pmUsePin').onclick = pmUsePin;
+$('#pmUseFp').onclick = pmStart;
+$('#pmReset').onclick = () => {
+  store.del(CRED_KEY); refreshBio();
+  $('#pmFpLabel').textContent = 'Register Touch ID to Change PIN';
+  pmStatus('fp', 'Touch ID removed from this device'); say('Touch ID removed', true); pmRender();
+};
+$('#pmSound').onclick = () => {
+  pm.sound = !pm.sound;
+  const b = $('#pmSound');
+  b.setAttribute('aria-pressed', pm.sound); b.textContent = pm.sound ? '🔊' : '🔇';
+  b.setAttribute('aria-label', pm.sound ? 'Voice and sound on' : 'Voice and sound off');
+  if (pm.sound) say('Voice on'); else stopVoice();
+};
+$('#pmClose').onclick = pmClose;
+$('#pmDoneBtn').onclick = pmClose;
+$('#pinBtn').onclick = pmOpen;
+pmEl.addEventListener('keydown', (e) => { if (e.key === 'Escape') pmClose(); });
+
+setLocked(true);
+checkBio();
+updateHint();
+
+refresh();
+setInterval(refresh, 4000);
+</script>
+</body>
+</html>
