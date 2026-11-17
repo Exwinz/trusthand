@@ -58,3 +58,7 @@ We surveyed **19 respondents** about errands and money:
 ## AI usage and credits disclosure
 
 AI tools assisted this project. **Claude** and **Gemini** helped with code scaffolding, debugging and documentation. **ElevenLabs** generated the voice clips in `public/sounds/`. All code was reviewed and tested by the team.
+
+
+## AI Usage
+See [AI_USAGE.md](./AI_USAGE.md) for full details and prompt logs on how Claude, Gemini Plus, and ElevenLabs were used during development.
