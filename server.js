@@ -12,6 +12,37 @@ const toUrl = (u) => (u || '').trim().replace(/^\$/, 'https://');
 const OWNER_URL = toUrl(process.env.OWNER_WALLET_ADDRESS);
 const SELLER_URL = toUrl(process.env.SELLER_WALLET_ADDRESS);
 
+// ---------- Wallet pointer normalization ----------
+// "$ilp.interledger-test.dev/ade", "ilp.interledger-test.dev/ade" and the short handle "ade" all become
+// "https://ilp.interledger-test.dev/ade". Hosts are checked against an allow-list so the server can never be
+// pointed at an arbitrary URL (SSRF): the default wallet host, the hosts of OWNER/SELLER_WALLET_ADDRESS, and
+// anything listed in ALLOWED_WALLET_HOSTS (comma separated).
+const DEFAULT_WALLET_HOST = (process.env.DEFAULT_WALLET_HOST || 'ilp.interledger-test.dev').toLowerCase();
+class WalletInputError extends Error {}
+function normalizePointer(raw) {
+  let v = String(raw ?? '').trim().replace(/^\$/, '');
+  if (!v || /\s/.test(v)) return '';
+  if (!/^https?:\/\//i.test(v)) v = v.includes('/') ? 'https://' + v : `https://${DEFAULT_WALLET_HOST}/${v}`;
+  try {
+    const u = new URL(v);
+    const path = u.pathname.replace(/\/+$/, '');
+    if (!/^\/[A-Za-z0-9._~%-]+(\/[A-Za-z0-9._~%-]+)*$/.test(path)) return '';
+    return 'https://' + u.host.toLowerCase() + path;
+  } catch (e) { return ''; }
+}
+const hostOf = (u) => { try { return new URL(u).host.toLowerCase(); } catch (e) { return ''; } };
+const ALLOWED_WALLET_HOSTS = new Set([
+  DEFAULT_WALLET_HOST, hostOf(OWNER_URL), hostOf(SELLER_URL),
+  ...(process.env.ALLOWED_WALLET_HOSTS || '').split(',').map((h) => h.trim().toLowerCase()),
+].filter(Boolean));
+function resolveWallet(raw, fallback) {
+  if (!String(raw ?? '').trim()) return fallback;
+  const url = normalizePointer(raw);
+  if (!url) throw new WalletInputError('That wallet address is not valid. Use $ilp.interledger-test.dev/name, or just the name.');
+  if (!ALLOWED_WALLET_HOSTS.has(hostOf(url))) throw new WalletInputError(`Wallet host ${hostOf(url)} is not allowed.`);
+  return url;
+}
+
 // ---------- PNG app icons (zero dependencies: fs + zlib) ----------
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   let c = n;
@@ -85,6 +116,8 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ---------- Open Payments client (lazy, cached) ----------
+// The authenticated client always uses KEY_ID + the private key registered for OWNER_WALLET_ADDRESS.
+// It requests grants against whatever sender/receiver wallet the frontend names (see walletFor).
 let ctxPromise;
 function getCtx() {
   if (!ctxPromise) {
@@ -94,19 +127,29 @@ function getCtx() {
         privateKey: process.env.PRIVATE_KEY_PATH || './private.key',
         keyId: process.env.KEY_ID,
       });
-      const [owner, seller] = await Promise.all([
-        client.walletAddress.get({ url: OWNER_URL }),
-        client.walletAddress.get({ url: SELLER_URL }),
-      ]);
-      return { client, owner, seller };
+      return { client };
     })().catch((e) => { ctxPromise = null; throw e; });
   }
   return ctxPromise;
 }
+const walletCache = new Map();
+async function walletFor(url) {
+  const hit = walletCache.get(url);
+  if (hit && hit.exp > Date.now()) return hit.wallet;
+  const { client } = await getCtx();
+  let wallet;
+  try { wallet = await client.walletAddress.get({ url }); }
+  catch (e) {
+    console.error('wallet lookup failed:', url, e.message);
+    throw new WalletInputError(`Wallet not found: $${url.replace(/^https:\/\//, '')}`);
+  }
+  walletCache.set(url, { wallet, exp: Date.now() + 5 * 60 * 1000 });
+  return wallet;
+}
 
 // ---------- In-memory errand session ----------
 // status: NONE | PENDING | ACTIVE | REVOKED | AUTO_LOCKED
-let session = { status: 'NONE', cap: 0, spent: 0, autoLock: true, token: null, manageUrl: null, scale: 2 };
+let session = { status: 'NONE', cap: 0, spent: 0, autoLock: true, token: null, manageUrl: null, scale: 2, senderUrl: OWNER_URL, receiverUrl: SELLER_URL, assetCode: 'EUR' };
 let pending = null; // interactive grant waiting for owner approval
 let lastReceipt = null; // most recent successful payment
 let lastBlocked = null; // most recent rejected payment
@@ -125,8 +168,9 @@ const view = () => ({
   spent: eur(session.spent),
   remaining: eur(Math.max(session.cap - session.spent, 0)),
   autoLock: session.autoLock,
-  currency: 'EUR',
-  seller: '$' + SELLER_URL.replace(/^https:\/\//, ''),
+  currency: session.assetCode || 'EUR',
+  sender: '$' + session.senderUrl.replace(/^https:\/\//, ''),
+  seller: '$' + session.receiverUrl.replace(/^https:\/\//, ''),
   lastReceipt,
   lastBlocked,
   ownerAccount: publicOwner(),
@@ -154,8 +198,12 @@ app.post('/api/grant', async (req, res) => {
     if (!cap) return res.status(400).json({ error: 'Cap must be a whole number from 1 to 50 EUR.' });
     if (!hours) return res.status(400).json({ error: 'Duration must be 1 to 168 hours.' });
 
+    const senderUrl = resolveWallet(req.body.senderWalletAddress, OWNER_URL);
+    const receiverUrl = resolveWallet(req.body.receiverWalletAddress, SELLER_URL);
+    const { client } = await getCtx();
+    const owner = await walletFor(senderUrl);   // the wallet the Owner is granting spending rights on
+    await walletFor(receiverUrl);               // fail fast if the recipient does not exist
     if (session.token) await revokeToken(); // replace any previous errand grant
-    const { client, owner } = await getCtx();
     const minor = cap * 10 ** owner.assetScale;
     const nonce = crypto.randomUUID();
     const start = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -176,7 +224,7 @@ app.post('/api/grant', async (req, res) => {
     });
 
     lastBlocked = null;
-    session = { status: 'PENDING', cap: minor, spent: 0, autoLock, token: null, manageUrl: null, scale: owner.assetScale };
+    session = { status: 'PENDING', cap: minor, spent: 0, autoLock, token: null, manageUrl: null, scale: owner.assetScale, senderUrl, receiverUrl, assetCode: owner.assetCode };
 
     if (isPendingGrant(grant)) {
       pending = { nonce, continueUri: grant.continue.uri, continueToken: grant.continue.access_token.value };
@@ -188,6 +236,7 @@ app.post('/api/grant', async (req, res) => {
     session.manageUrl = grant.access_token.manage;
     res.json(view());
   } catch (e) {
+    if (e instanceof WalletInputError) return res.status(400).json({ error: e.message });
     console.error('grant error:', e);
     res.status(502).json({ error: 'Could not create grant', detail: e.message });
   }
@@ -238,8 +287,20 @@ app.post('/api/pay', async (req, res) => {
   const minor = amount * 10 ** session.scale;
   if (session.spent + minor > session.cap) return reject(res, 403, 'LIMIT_EXCEEDED', amount);
 
+  let receiverUrl;
   try {
-    const { client, owner, seller } = await getCtx();
+    if (req.body.senderWalletAddress && resolveWallet(req.body.senderWalletAddress, session.senderUrl) !== session.senderUrl) {
+      return reject(res, 400, 'INVALID_WALLET', amount, { error: 'Sender wallet does not match the approved grant.' });
+    }
+    receiverUrl = resolveWallet(req.body.receiverWalletAddress, session.receiverUrl);
+  } catch (e) {
+    return reject(res, 400, 'INVALID_WALLET', amount, { error: e.message });
+  }
+
+  try {
+    const { client } = await getCtx();
+    const owner = await walletFor(session.senderUrl);
+    const seller = await walletFor(receiverUrl);
 
     // 1. Receiver: incoming payment on the seller's wallet
     const inGrant = await client.grant.request({ url: seller.authServer }, {
@@ -284,7 +345,7 @@ app.post('/api/pay', async (req, res) => {
       txId: String(payment.id).split('/').pop(),
       amountEur: amount,
       settledUsd: rx ? Number(rx.value) / 10 ** rx.assetScale : null,
-      seller: view().seller,
+      seller: '$' + receiverUrl.replace(/^https:\/\//, ''),
       remainingEur: view().remaining,
       autoLocked,
       timestamp: new Date().toISOString(),
@@ -292,6 +353,7 @@ app.post('/api/pay', async (req, res) => {
     lastBlocked = null;
     res.json({ ok: true, autoLocked, paymentId: payment.id, amount, ...view() });
   } catch (e) {
+    if (e instanceof WalletInputError) return reject(res, 400, 'INVALID_WALLET', amount, { error: e.message });
     console.error('pay error:', e.message);
     const text = `${e.description || ''} ${e.message || ''}`.toLowerCase();
     if (e.status === 401 || /invalid token|revoked/.test(text)) {
@@ -322,7 +384,8 @@ const linkFails = new Map(); // ip -> { n, until }
 app.post('/api/owner/setup', (req, res) => {
   const name = cleanName(req.body.name);
   if (!name) return res.status(400).json({ error: 'Owner name is required.' });
-  const walletAddress = String(req.body.walletAddress ?? '').trim() || process.env.OWNER_WALLET_ADDRESS || '';
+  let walletAddress;
+  try { walletAddress = resolveWallet(req.body.walletAddress, OWNER_URL); } catch (e) { return res.status(400).json({ error: e.message }); }
   const names = Array.isArray(req.body.helperNames) ? req.body.helperNames.map(cleanName).filter(Boolean) : [];
   // First setup generates the code; later edits keep it unless regenerate is requested.
   const pairCode = !ownerAccount.pairCode || req.body.regenerate === true ? newCode() : ownerAccount.pairCode;
@@ -383,5 +446,5 @@ app.get('/api/status', (_req, res) => res.json(view()));
 
 app.listen(PORT, () => {
   console.log(`TrustHand running on ${BASE_URL}`);
-  getCtx().then(() => console.log('Open Payments client ready')).catch((e) => console.error('Open Payments init failed:', e.message));
+  getCtx().then(() => walletFor(OWNER_URL)).then(() => console.log('Open Payments client ready')).catch((e) => console.error('Open Payments init failed:', e.message));
 });
