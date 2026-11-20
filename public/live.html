@@ -183,9 +183,27 @@ html.offline #offline{display:flex}
 .off-msg{min-height:1.2em;color:var(--red);font-weight:700;font-size:.9rem}
 .off-retry{width:100%;min-height:64px;border-radius:16px;background:var(--em);color:#fff;font-weight:800;font-size:1.25rem}
 .off-retry:disabled{opacity:.6;cursor:wait}
+body{touch-action:manipulation;padding-bottom:110px}
+.big-in.wal{background:var(--em-l);border-color:var(--em)}
+input.seller{display:block;width:100%;color:var(--ink)}
+.mic{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:25;display:flex;align-items:center;gap:10px;min-height:64px;padding:12px 26px;border-radius:999px;background:#0F172A;color:#fff;border:3px solid #F59E0B;font-weight:800;font-size:1.15rem;box-shadow:0 8px 24px rgba(15,23,42,.35)}
+.mic[aria-pressed=true]{background:var(--em);border-color:#fff}
+.mic:focus-visible{outline:4px solid #fff;outline-offset:3px}
+.vstat{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(max(14px,env(safe-area-inset-bottom)) + 78px);z-index:25;max-width:90vw;text-align:center;font-size:.9rem;font-weight:700;color:var(--ink);background:#fff;border:2px solid var(--ink);border-radius:12px;padding:6px 12px;pointer-events:none}
+.vstat:empty{display:none}
+.ov{position:fixed;inset:0;z-index:40;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.ov-card{width:100%;max-width:420px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px}
+.ov h2{font-size:1.8rem;font-weight:800;color:#F59E0B}
+.ov p{font-size:1.1rem;line-height:1.4}
+.ov .beats{font:700 2.4rem 'JetBrains Mono',monospace;letter-spacing:.2em;min-height:1.4em;color:#F59E0B}
+.ov .dots i{border-color:#F59E0B}
+.ov .dots i.f{background:#F59E0B}
+.ov.shake .ov-card{animation:shake .35s}
 </style>
 </head>
 <body>
+<button id="micBtn" class="mic" autofocus aria-label="Speak a voice command" aria-pressed="false"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg><span id="micLbl">Tap to Speak</span></button>
+<div id="voiceStatus" class="vstat" role="status" aria-live="polite"></div>
 <div id="splash" tabindex="0" role="button" aria-label="TrustHand by Twostack. Press to continue.">
   <div class="lockup">
     <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#065F46"/><path d="M13.4 11.5h37.2V32C50.6 44 42 50 32 55 22 50 13.4 44 13.4 32z" fill="none" stroke="#F59E0B" stroke-width="3.5" stroke-linejoin="round"/><circle cx="32" cy="23.7" r="4.8" fill="#FFFFFF"/><path d="M19.2 32Q32 48.6 44.8 32" fill="none" stroke="#FFFFFF" stroke-width="3.2"/></svg>
@@ -231,9 +249,11 @@ html.offline #offline{display:flex}
       <label class="lbl" for="suName" style="align-self:flex-start">My name</label>
       <input class="big-in" id="suName" type="text" maxlength="40" placeholder="Mama Tobi" autocomplete="name">
       <div class="lbl" style="align-self:flex-start">My Interledger wallet</div>
-      <input class="big-in mono" id="suWallet" type="text" value="$ilp.interledger-test.dev/43a3e0f4" readonly aria-label="My Interledger wallet address">
+      <input class="big-in mono wal" id="suWallet" type="text" value="$ilp.interledger-test.dev/43a3e0f4" list="walletBook" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="My Interledger wallet address">
       <button class="link" id="suWalletEdit">Use a different wallet</button>
       <button class="bigbtn ok" id="suConfirm">Confirm My Wallet ✓</button>
+      <button class="bigbtn" id="suVoiceReg">🎙️ Register by Voice</button>
+      <button class="bigbtn" id="suRhythm">Set Secret Rhythm</button>
     </div>
 
     <div class="pm-sec" id="su2" hidden>
@@ -272,8 +292,10 @@ html.offline #offline{display:flex}
       <div><b>Auto-lock after 1st payment</b><div style="margin-top:6px"><span class="badge b-lock" id="o-mode">Single-Errand Auto-Lock</span></div></div>
       <button class="sw" id="lockSw" role="switch" aria-checked="true" aria-label="Auto-lock after first payment"></button>
     </div>
+    <div class="card"><label class="lbl" for="oSeller">Verified seller (who can be paid)</label><input class="seller" id="oSeller" type="text" value="$ilp.interledger-test.dev/trusthand-seller" list="walletBook" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="$ilp.interledger-test.dev/ade"></div>
     <button class="primary" id="setBtn">Set limit and approve</button>
     <div class="msg" id="oMsg" role="alert"></div>
+    <button class="bigbtn" id="genCodeBtn">Generate Pairing Code (silent check)</button>
     <div class="wave" id="wave" aria-live="polite"><span><i></i><i></i><i></i><i></i><i></i></span>Playing spoken receipt</div>
     <div class="slot" id="o-alert"></div>
     <div class="slot" id="o-receipt"></div>
@@ -307,7 +329,7 @@ html.offline #offline{display:flex}
       <span class="badge b-idle" id="h-status">Waiting for Owner</span>
       <div style="margin-top:8px"><span class="badge b-lock" id="h-mode">Single-Errand Auto-Lock</span></div>
     </div>
-    <div class="card"><span class="lbl">Verified seller</span><div class="seller" id="h-seller">$ilp.interledger-test.dev/trusthand-seller</div></div>
+    <div class="card"><label class="lbl" for="h-seller">Verified seller</label><input class="seller" id="h-seller" type="text" value="$ilp.interledger-test.dev/trusthand-seller" list="walletBook" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
     <div class="presets" style="grid-template-columns:1fr">
       <button class="preset" data-amt="12">€12 Pharmacy Errand</button>
       <button class="preset" data-amt="8">€8 Second Shop Test</button>
@@ -342,6 +364,29 @@ html.offline #offline{display:flex}
     <p>Active internet is required to connect to Interledger wallets</p>
     <div class="off-msg" id="offMsg" aria-live="polite"></div>
     <button class="off-retry" id="retryBtn">Retry</button>
+  </div>
+</div>
+<datalist id="walletBook"></datalist>
+<div id="rhythmOv" class="ov" hidden role="dialog" aria-modal="true" aria-label="Record your secret rhythm" tabindex="-1">
+  <div class="ov-card">
+    <h2>Tap your secret rhythm</h2>
+    <p>3 to 5 beats anywhere on this screen: tap, click, Space or Enter. Pause when you are done.</p>
+    <div class="beats" id="rhythmBeats" aria-live="polite"></div>
+    <button class="bigbtn" id="rhythmCancel" data-nobeat>Cancel</button>
+  </div>
+</div>
+<div id="authOv" class="ov" hidden role="dialog" aria-modal="true" aria-label="Silent authorization" tabindex="-1">
+  <div class="ov-card">
+    <h2>Authorize</h2>
+    <p>Tap your secret rhythm anywhere, or use your fingerprint, or the PIN pad. Nothing needs to be said aloud.</p>
+    <div class="beats" id="authBeats" aria-live="polite"></div>
+    <button class="bigbtn ok" id="authBio" data-nobeat>Use Touch ID / fingerprint</button>
+    <div data-nobeat style="width:100%;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div class="dots lg" id="authDots"><i></i><i></i><i></i><i></i></div>
+      <div class="bigpad" id="authPad"></div>
+    </div>
+    <div class="msg" id="authMsg" role="alert" style="color:#FCA5A5"></div>
+    <button class="link" id="authCancel" data-nobeat style="color:#fff">Cancel</button>
   </div>
 </div>
 <script>
@@ -427,14 +472,15 @@ function stopVoice() {
 // Clips are decoded through the Web Audio engine: once the first tap has unlocked it, playback no longer
 // depends on a fresh user gesture (e.g. the prompt that follows a network request), and clips are preloaded.
 const clipBuf = new Map();
-function loadClip(file) {
-  if (!clipBuf.has(file)) {
-    clipBuf.set(file, fetch('/sounds/' + file, { cache: 'no-cache' })
+function loadClip(file, dir = '/sounds/') {
+  const key = dir + file;
+  if (!clipBuf.has(key)) {
+    clipBuf.set(key, fetch(dir + file, { cache: 'no-cache' })
       .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
       .then((b) => new Promise((res, rej) => audioCtx().decodeAudioData(b, res, rej)))
-      .catch((e) => { clipBuf.delete(file); throw e; })); // failures are not remembered, so a clip added later is picked up
+      .catch((e) => { clipBuf.delete(key); throw e; })); // failures are not remembered, so a clip added later is picked up
   }
-  return clipBuf.get(file);
+  return clipBuf.get(key);
 }
 let warmed = false;
 function warmClips() { // preload every prompt clip after the first tap so none waits on the network
@@ -442,12 +488,12 @@ function warmClips() { // preload every prompt clip after the first tap so none 
   warmed = true;
   new Set(Object.values(CLIPS)).forEach((f) => loadClip(f).catch(() => {}));
 }
-async function playClip(file) {
+async function playClip(file, dir = '/sounds/') {
   try {
     const ctx = audioCtx();
     if (ctx.state !== 'running') await Promise.race([ctx.resume(), new Promise((r) => setTimeout(r, 400))]);
     if (ctx.state !== 'running') throw new Error('audio is still locked (needs a tap first)');
-    const buf = await Promise.race([loadClip(file), new Promise((_, rej) => setTimeout(() => rej(new Error('load timeout')), 6000))]);
+    const buf = await Promise.race([loadClip(file, dir), new Promise((_, rej) => setTimeout(() => rej(new Error('load timeout')), 6000))]);
     return await new Promise((resolve) => {
       const src = ctx.createBufferSource();
       src.buffer = buf; src.connect(ctx.destination);
@@ -490,20 +536,26 @@ function browserVoice(text) {
   });
 }
 // parts: [{ file, text }] or { pause: ms }. queue=false interrupts whatever is speaking.
-function voiceParts(parts, queue) {
+let vDepth = 0, vLastEnd = 0; // used by voice control to ignore the app's own audio
+function voiceParts(parts, queue) { // parts: { file, text, dirs? } | { pause: ms }; returns a promise for the whole sequence
   if (!queue) stopVoice();
   const gen = vGen;
   vChain = vChain.then(async () => {
-    for (const p of parts) {
-      if (gen !== vGen) return;
-      try {
-        if (typeof p.pause === 'number') { await new Promise((r) => setTimeout(r, p.pause)); continue; }
-        const ok = p.file != null ? await playClip(p.file) : false;
+    vDepth++;
+    try {
+      for (const p of parts) {
         if (gen !== vGen) return;
-        if (!ok) await browserVoice(p.text); // clip missing or stuck: browser voice for this one, then carry on
-      } catch (e) { console.warn('Voice step failed:', p.file, e); } // never abandon the rest of the sequence
-    }
+        try {
+          if (typeof p.pause === 'number') { await new Promise((r) => setTimeout(r, p.pause)); continue; }
+          let ok = false;
+          if (p.file != null) for (const d of (p.dirs || ['/sounds/'])) { ok = await playClip(p.file, d); if (ok || gen !== vGen) break; }
+          if (gen !== vGen) return;
+          if (!ok) await browserVoice(p.text); // clip missing or stuck: browser voice for this one, then carry on
+        } catch (e) { console.warn('Voice step failed:', p.file, e); } // never abandon the rest of the sequence
+      }
+    } finally { vDepth--; vLastEnd = Date.now(); }
   }).catch(() => {}); // a failure can never poison later prompts
+  return vChain;
 }
 const speakPrompt = (text, queue, file) => voiceParts([{ file: file ?? clipFor(text), text }], queue);
 
@@ -692,7 +744,7 @@ $('#vaultBack').onclick = () => { vault.classList.add('open'); gotoRole(); };
 // ---------- Status polling + cross-device events ----------
 const STATUS_LABEL = { NONE: ['No errand', 'b-idle'], PENDING: ['Waiting for approval', 'b-idle'], ACTIVE: ['Active', 'b-active'], REVOKED: ['Access stopped', 'b-dead'], AUTO_LOCKED: ['Auto-locked', 'b-dead'] };
 const HELPER_LABEL = { ACTIVE: ['Active', 'b-active'], PENDING: ['Invited', 'b-multi'], REVOKED: ['Removed', 'b-dead'] };
-const REASONS = { LIMIT_EXCEEDED: 'Over the spending limit', REVOKED: 'Helper access was stopped', AUTO_LOCKED: 'Auto-locked after the first payment', PAYMENT_FAILED: 'The payment could not be completed' };
+const REASONS = { LIMIT_EXCEEDED: 'Over the spending limit', REVOKED: 'Helper access was stopped', AUTO_LOCKED: 'Auto-locked after the first payment', PAYMENT_FAILED: 'The payment could not be completed', INVALID_WALLET: 'That wallet address is not valid' };
 const seen = { r: undefined, b: undefined };
 async function poll() {
   try {
@@ -799,7 +851,8 @@ $('#lockSw').onclick = () => {
 };
 async function startGrant(cap, autoLock) {
   $('#oMsg').textContent = '';
-  const { status, data } = await api('/api/grant', { cap, durationHours: 24, autoLock });
+  const wallets = window.TH ? { senderWalletAddress: TH.ownerWalletUrl(), receiverWalletAddress: TH.sellerUrl('o') } : {};
+  const { status, data } = await api('/api/grant', { cap, durationHours: 24, autoLock, ...wallets });
   if (status !== 200) { $('#oMsg').textContent = 'Could not set limit: ' + (data.error || 'error'); return; }
   state.s = data; renderOwner();
   if (data.redirectUrl) {
@@ -866,7 +919,7 @@ function suShow(n) {
 function setupStart() {
   const a = state.s.ownerAccount || {};
   $('#suName').value = a.name || $('#suName').value;
-  if (a.walletAddress) $('#suWallet').value = a.walletAddress;
+  if (a.walletAddress) $('#suWallet').value = window.TH ? TH.toDollar(a.walletAddress) : a.walletAddress;
   $('#suCancel').hidden = !a.isSetup;
   su.touch = !!store.get(CRED_KEY); su.pinSet = false; su.mode = 'new'; su.buf = ''; su.first = '';
   suDots(); suNextLabel();
@@ -998,7 +1051,7 @@ function renderHelper() {
   const L = s.status === 'NONE' || !s.status ? ['Waiting for Owner', 'b-idle'] : (STATUS_LABEL[s.status] || ['—', 'b-idle']);
   setBadge($('#h-status'), L[0], L[1]);
   setBadge($('#h-mode'), s.autoLock ? 'Single-Errand Auto-Lock' : 'Multi-Stop Mode', s.autoLock ? 'b-lock' : 'b-multi');
-  if (s.seller) $('#h-seller').textContent = s.seller;
+  if (window.TH) TH.syncSeller(s);
   $('#payBtn').disabled = s.status !== 'ACTIVE';
   renderCards('h', s);
 }
@@ -1009,7 +1062,8 @@ $('#payBtn').onclick = async () => {
   if (!h) return;
   if (!Number.isInteger(amount) || amount < 1 || amount > 50) { $('#hPayMsg').textContent = 'Enter a whole amount from 1 to 50 EUR.'; buzz([200, 80, 200]); return; }
   $('#payBtn').disabled = true;
-  const { status, data } = await api('/api/pay', { amount, helperId: h.id });
+  const wallets = window.TH ? { receiverWalletAddress: TH.sellerUrl('h') } : {};
+  const { status, data } = await api('/api/pay', { amount, helperId: h.id, ...wallets });
   if (data && data.status) { state.s = data; seen.r = data.lastReceipt ? data.lastReceipt.txId : ''; seen.b = data.lastBlocked ? data.lastBlocked.timestamp : ''; }
   renderHelper();
   if (status === 200 && data.ok) {
@@ -1107,6 +1161,516 @@ show('s-role');
 { const r = sessionStorage.getItem('th_role'); if (r) pickRole(r); }
 poll();
 setInterval(poll, 4000);
+</script>
+<script>
+// ===== Blind-first voice control, silent rhythm/biometric authorization, editable trusted wallets =====
+(() => {
+'use strict';
+/*PURE-START*/
+const DEFAULT_HOST = 'ilp.interledger-test.dev';
+function normPointer(raw) { // "$host/name" | "host/name" | "name"  ->  "https://host/name" ('' when unusable)
+  let v = String(raw == null ? '' : raw).trim().replace(/^\$/, '');
+  if (!v || /\s/.test(v)) return '';
+  if (!/^https?:\/\//i.test(v)) v = v.includes('/') ? 'https://' + v : 'https://' + DEFAULT_HOST + '/' + v;
+  try {
+    const u = new URL(v);
+    const path = u.pathname.replace(/\/+$/, '');
+    if (!/^\/[A-Za-z0-9._~%-]+(\/[A-Za-z0-9._~%-]+)*$/.test(path)) return '';
+    return 'https://' + u.host.toLowerCase() + path;
+  } catch (e) { return ''; }
+}
+const toDollar = (url) => (url ? '$' + String(url).replace(/^https?:\/\//, '') : '');
+const handleOf = (url) => String(url).split('/').filter(Boolean).pop() || String(url);
+const titleCase = (s) => String(s).toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
+const cleanName = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+const UNITS = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+const TENS = { twenty: 20, thirty: 30, forty: 40, fifty: 50 };
+function parseAmount(t) { // "20", "twenty five", "fifteen euros"
+  const m = String(t).match(/\d+/);
+  if (m) return parseInt(m[0], 10);
+  let total = 0, any = false;
+  for (const w of String(t).toLowerCase().split(/[\s-]+/)) {
+    if (w in UNITS) { total += UNITS[w]; any = true; } else if (w in TENS) { total += TENS[w]; any = true; }
+  }
+  return any ? total : null;
+}
+const DIGIT_WORDS = { zero: '0', oh: '0', one: '1', won: '1', two: '2', to: '2', too: '2', three: '3', four: '4', for: '4', five: '5', six: '6', seven: '7', eight: '8', ate: '8', nine: '9' };
+function extractDigits(t) { // "six seven zero one four six" / "670 146"  ->  "670146"
+  let out = '';
+  for (const w of String(t).toLowerCase().split(/[^a-z0-9]+/)) {
+    if (!w) continue;
+    if (/^\d+$/.test(w)) out += w; else if (w in DIGIT_WORDS) out += DIGIT_WORDS[w];
+  }
+  return out;
+}
+const HANDLE_WORDS = { zero: '0', oh: '0', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7', eight: '8', nine: '9', dot: '.', period: '.', dash: '-', hyphen: '-', underscore: '_' };
+function spokenToHandle(t) { // "four three a three e zero f four" -> "43a3e0f4"; "a d e" -> "ade"
+  return String(t).toLowerCase().replace(/[^a-z0-9.\s_-]/g, ' ').split(/\s+/).map((w) => (w in HANDLE_WORDS ? HANDLE_WORDS[w] : w)).join('').replace(/[^a-z0-9._-]/g, '');
+}
+function parseIntent(raw, screen) {
+  const t = String(raw).toLowerCase().replace(/[^a-z0-9$'\s.-]/g, ' ').replace(/\s+/g, ' ').trim();
+  let m;
+  if (/\b(stop listening|sleep)\b/.test(t)) return { type: 'sleep' };
+  if (screen === 's-hlink') {
+    if ((m = t.match(/\b(?:my name is|i am|i'm|im)\s+(.+)$/))) return { type: 'myname', name: m[1] };
+    if (/^(connect|link)\b/.test(t)) return { type: 'connect' };
+    const d = extractDigits(t);
+    if (d) return { type: 'code', digits: d };
+  }
+  if (screen === 's-role') {
+    if (/\bowner\b/.test(t)) return { type: 'role', role: 'owner' };
+    if (/\bhelper\b/.test(t)) return { type: 'role', role: 'helper' };
+  }
+  if (screen === 's-setup' && /\bregister\b/.test(t)) return { type: 'register' };
+  if (/\b(generate (?:a |the |my )?code|start (?:an |the |a )?errand|new code)\b/.test(t)) return { type: 'generate' };
+  if (/\b(cancel (?:the )?errand|revoke|lock)\b/.test(t) && !/\bunlock\b/.test(t)) return { type: 'lock' };
+  if (/\b(status|what is my limit|what's my limit|whats my limit|what is the limit)\b/.test(t)) return { type: 'status' };
+  if ((m = t.match(/\b(?:limit|cap)\b\s*(?:to|at|is)?\s*(.*)$/))) return { type: 'limit', n: parseAmount(m[1]) };
+  if ((m = t.match(/^(?:please )?(?:pay|send to|send|set seller(?: to)?|set recipient(?: to)?|seller)\s+(.+)$/))) return { type: 'seller', name: m[1].replace(/^to\s+/, '') };
+  return { type: 'unknown' };
+}
+const RhythmMath = {
+  ratios(times) { // beat timestamps -> inter-beat intervals relative to the shortest one, e.g. [1, 3]
+    const iv = times.slice(1).map((t, i) => t - times[i]);
+    const min = Math.min(...iv);
+    return iv.map((x) => Math.round((x / min) * 100) / 100);
+  },
+  match(a, b, tol = 0.4) { return a.length === b.length && a.every((x, i) => Math.abs(x - b[i]) / b[i] <= tol); },
+};
+/*PURE-END*/
+
+// ---------- Tactile feedback ----------
+function triggerTactilePulse() {
+  try { navigator.vibrate && navigator.vibrate(40); } catch (e) {}
+  try { tone(600, 0, 0.03, 'sine', 0.12); } catch (e) {} // 30 ms, 600 Hz soft click for laptops
+}
+
+// ---------- ElevenLabs prompt helper: /audio/<clip>.mp3 first, /sounds/ second, browser voice last ----------
+const VOICE_TEXT = {
+  welcome: 'Welcome to TrustHand. Say a command, or double tap anywhere.', ask_name: 'What is your name?', ask_wallet: 'What is your wallet name?',
+  record_rhythm: 'Tap your secret rhythm, three to five beats.', rhythm_saved: 'Rhythm saved.', ask_confirm: 'Say confirm to finish.',
+  ask_auth: 'Tap your secret rhythm, or use your fingerprint.', auth_verified: 'Verified.', auth_failed: 'Not recognized. Try again.',
+  ask_limit: 'What is the spending limit?', limit_updated: 'Limit updated.', code_ready: 'Your code is ready.',
+  errand_locked: 'Errand locked.', not_understood: 'Sorry, I did not understand.',
+};
+function playVoicePrompt(clipName, dynamicSuffixText) {
+  if (!state.voice) return Promise.resolve(); // honours the voice mute toggle
+  const parts = [{ file: clipName + '.mp3', dirs: ['/audio/', '/sounds/'], text: VOICE_TEXT[clipName] || '' }];
+  const suf = dynamicSuffixText == null ? '' : String(dynamicSuffixText).trim();
+  if (suf) {
+    if (/^\d{1,2}$/.test(suf) && +suf <= 59) numberToFiles(+suf).forEach((f, i) => parts.push({ file: f, text: i ? '' : suf })); // numbers use the recorded clips too
+    else parts.push({ text: suf }); // names, handles: browser voice right after the clip
+  }
+  return voiceParts(parts, false);
+}
+window.playVoicePrompt = playVoicePrompt;
+
+// ---------- Trusted wallets address book ----------
+const BOOK_KEY = 'th_book';
+const SEED = [
+  { name: 'Mama Tobi', wallet: '$ilp.interledger-test.dev/43a3e0f4' },
+  { name: 'Ade', wallet: '$ilp.interledger-test.dev/ade' },
+  { name: 'TrustHand Seller', wallet: '$ilp.interledger-test.dev/trusthand-seller' },
+];
+function loadBook() {
+  try { const b = JSON.parse(store.get(BOOK_KEY)); if (Array.isArray(b) && b.length) return b; } catch (e) {}
+  store.set(BOOK_KEY, JSON.stringify(SEED));
+  return SEED.slice();
+}
+function renderBook() {
+  const dl = $('#walletBook'); dl.replaceChildren();
+  loadBook().forEach((e) => { const o = document.createElement('option'); o.value = e.wallet; o.label = e.name; dl.append(o); });
+}
+function rememberWallet(raw, name) { // any new wallet typed or spoken is saved automatically
+  const url = normPointer(raw);
+  if (!url) return;
+  const book = loadBook();
+  if (book.some((e) => normPointer(e.wallet) === url)) return;
+  book.push({ name: name || titleCase(handleOf(url)), wallet: toDollar(url) });
+  store.set(BOOK_KEY, JSON.stringify(book));
+  renderBook();
+}
+function findContact(spoken) { // exact name, or the spoken word is the start of a saved name ("mama" -> Mama Tobi)
+  const q = cleanName(spoken);
+  if (!q) return null;
+  const book = loadBook();
+  return book.find((e) => cleanName(e.name) === q) || book.find((e) => cleanName(e.name).startsWith(q)) || null;
+}
+const contactByWallet = (w) => { const u = normPointer(w); return loadBook().find((e) => normPointer(e.wallet) === u) || null; };
+function resolveRecipient(spoken) {
+  const c = findContact(spoken);
+  if (c) return { wallet: c.wallet, name: c.name };
+  const h = spokenToHandle(spoken);
+  return h ? { wallet: '$' + DEFAULT_HOST + '/' + h, name: titleCase(String(spoken).trim()) } : null;
+}
+
+// ---------- Editable wallet inputs ----------
+const ownerInput = $('#suWallet'), oSeller = $('#oSeller'), hSeller = $('#h-seller');
+ownerInput.value = store.get('th_owner_wallet') || ownerInput.value;
+const sellerInit = store.get('th_seller_wallet') || '$ilp.interledger-test.dev/trusthand-seller';
+oSeller.value = sellerInit; hSeller.value = sellerInit;
+let hSellerTouched = false;
+ownerInput.addEventListener('input', () => store.set('th_owner_wallet', ownerInput.value.trim()));
+ownerInput.addEventListener('change', () => rememberWallet(ownerInput.value));
+oSeller.addEventListener('input', () => store.set('th_seller_wallet', oSeller.value.trim()));
+oSeller.addEventListener('change', () => rememberWallet(oSeller.value));
+hSeller.addEventListener('input', () => { hSellerTouched = true; });
+hSeller.addEventListener('change', () => rememberWallet(hSeller.value));
+$('#suWalletEdit').onclick = () => { ownerInput.value = ''; store.set('th_owner_wallet', ''); ownerInput.focus(); }; // "Use a different wallet"
+const walletValue = (v) => normPointer(v) || String(v).trim(); // unusable text is sent as-is so the server can explain the problem
+window.TH = {
+  toDollar, normPointer,
+  ownerWalletUrl: () => walletValue(ownerInput.value),
+  sellerUrl: (who) => walletValue((who === 'o' ? oSeller : hSeller).value),
+  syncSeller: (s) => { if (s && s.seller && !hSellerTouched && document.activeElement !== hSeller) hSeller.value = s.seller; },
+};
+
+// ---------- Secret tap-rhythm engine ----------
+const TapRhythm = {
+  KEY: 'th_rhythm', GAP: 1800, active: 0,
+  load() {
+    try { const r = JSON.parse(store.get(this.KEY)); if (Array.isArray(r) && r.length >= 2 && r.every((x) => x > 0)) return r; } catch (e) {}
+    store.set(this.KEY, JSON.stringify([1, 3])); // default demo rhythm: tap-tap, pause, tap
+    return [1, 3];
+  },
+  save(r) { store.set(this.KEY, JSON.stringify(r)); },
+  // Collects beats (taps, clicks, Space, Enter) inside `root` until a pause; calls done(times). Elements marked data-nobeat never count.
+  capture(root, done, onBeat, ignore = '[data-nobeat]') {
+    const times = []; let timer = null, over = false;
+    const stop = () => { root.removeEventListener('pointerdown', onPtr); document.removeEventListener('keydown', onKey, true); clearTimeout(timer); TapRhythm.active = Math.max(0, TapRhythm.active - 1); };
+    const finish = () => { if (over) return; over = true; stop(); done(times.slice()); };
+    const beat = () => {
+      const now = performance.now();
+      if (times.length && now - times[times.length - 1] < 80) return;
+      times.push(now); triggerTactilePulse(); onBeat && onBeat(times.length);
+      clearTimeout(timer);
+      timer = setTimeout(finish, times.length >= 5 ? 250 : TapRhythm.GAP);
+    };
+    function onPtr(e) { if (e.isPrimary === false || (e.target.closest && e.target.closest(ignore))) return; beat(); }
+    function onKey(e) {
+      if (e.repeat || (e.key !== ' ' && e.key !== 'Enter')) return;
+      if (e.target.closest && e.target.closest(ignore + ',input,textarea')) return;
+      e.preventDefault(); e.stopPropagation(); beat();
+    }
+    root.addEventListener('pointerdown', onPtr); document.addEventListener('keydown', onKey, true); TapRhythm.active++;
+    return { cancel() { if (!over) { over = true; stop(); } } };
+  },
+};
+const validBeats = (t) => t.length >= 3 && t.length <= 5;
+
+// ---------- Voice recognition engine ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const Voice = {
+  rec: null, on: false, running: false, holds: 0, waiter: null, waitT: null, restartT: null, errors: 0, welcomed: false, lastNU: 0,
+  pause() { this.holds++; this.stopRec(); },
+  resume() { this.holds = Math.max(0, this.holds - 1); if (!this.holds) setTimeout(ensureRunning, 450); },
+  stopRec() { clearTimeout(this.restartT); try { this.rec && this.rec.abort(); } catch (e) {} this.running = false; },
+};
+let statusT;
+function setStatus(t) {
+  const s = $('#voiceStatus'); s.textContent = t;
+  clearTimeout(statusT); statusT = setTimeout(() => { s.textContent = ''; }, 7000);
+}
+function updateMic() {
+  $('#micBtn').setAttribute('aria-pressed', Voice.on ? 'true' : 'false');
+  $('#micLbl').textContent = Voice.on ? 'Listening… tap to stop' : 'Tap to Speak';
+}
+const audioBusy = () => vDepth > 0 || (window.speechSynthesis && speechSynthesis.speaking) || $('#wave').classList.contains('on') || Date.now() - vLastEnd < 700;
+function newRec() {
+  const r = new SR();
+  r.lang = 'en-NG'; r.continuous = false; r.interimResults = false; r.maxAlternatives = 1;
+  r.onresult = (e) => {
+    const res = e.results[e.results.length - 1];
+    if (!res || !res.isFinal) return;
+    const text = res[0].transcript.trim();
+    if (!text || audioBusy()) return; // never react to our own voice
+    Voice.errors = 0; setStatus('Heard: “' + text + '”');
+    if (Voice.waiter) { Voice.waiter(text); return; }
+    handleCommand(text);
+  };
+  r.onend = () => {
+    Voice.running = false;
+    if ((Voice.on || Voice.waiter) && !Voice.holds) { clearTimeout(Voice.restartT); Voice.restartT = setTimeout(ensureRunning, 300); } // hands-free loop
+    updateMic();
+  };
+  r.onerror = (e) => {
+    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { Voice.on = false; setStatus('Microphone is blocked. Allow it, then double-tap or press Space.'); }
+    else if (e.error === 'audio-capture') { Voice.on = false; setStatus('No microphone found.'); }
+    else if (e.error === 'network' && ++Voice.errors > 3) { Voice.on = false; setStatus('Voice recognition needs an internet connection.'); }
+    updateMic();
+  };
+  return r;
+}
+function ensureRunning() {
+  if (!SR || Voice.running || Voice.holds || !(Voice.on || Voice.waiter)) return;
+  try { if (!Voice.rec) Voice.rec = newRec(); Voice.rec.start(); Voice.running = true; }
+  catch (e) { if (e && e.name === 'InvalidStateError') Voice.running = true; }
+}
+function voiceStart() {
+  if (!SR) { setStatus('Voice commands need Chrome, Edge or Safari. Use the buttons instead.'); return false; }
+  Voice.on = true; Voice.errors = 0; ensureRunning(); updateMic();
+  return true;
+}
+function voiceStop() { Voice.on = false; Voice.stopRec(); updateMic(); }
+function listenOnce(ms = 9000) { // one guided answer; resolves null on silence
+  return new Promise((resolve) => {
+    clearTimeout(Voice.waitT);
+    const wasOn = Voice.on;
+    const end = (v) => { clearTimeout(Voice.waitT); Voice.waiter = null; if (!wasOn && !Voice.on) Voice.stopRec(); resolve(v); };
+    Voice.waiter = end;
+    Voice.waitT = setTimeout(() => { if (Voice.waiter) end(null); }, ms);
+    ensureRunning();
+  });
+}
+async function vprompt(clip, suffix) { Voice.pause(); try { await playVoicePrompt(clip, suffix); } finally { Voice.resume(); } }
+async function vspeak(text) { Voice.pause(); try { await voiceParts([{ text }], false); } finally { Voice.resume(); } }
+async function vreadCode() { // pairing digits, one by one, with the recorded digit clips
+  const c = String(store.get('th_pair') || '');
+  if (!/^\d{6}$/.test(c)) return;
+  Voice.pause();
+  try { await voiceParts([{ file: 'pairing_code_is.mp3', text: 'Your pairing code is' }, ...[...c].map((d) => ({ file: d + '.mp3', text: d }))], false); }
+  finally { Voice.resume(); }
+}
+async function askText(clip, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    await vprompt(clip);
+    const heard = await listenOnce(10000);
+    if (heard) return heard;
+    await vprompt('not_understood');
+  }
+  return null;
+}
+
+// ---------- Recording the secret rhythm ----------
+function recordRhythm() {
+  return new Promise((resolve) => {
+    const ov = $('#rhythmOv'), beats = $('#rhythmBeats');
+    let cap = null, closed = false;
+    const end = (r) => { if (closed) return; closed = true; cap && cap.cancel(); ov.hidden = true; Voice.resume(); resolve(r); };
+    Voice.pause(); beats.textContent = ''; ov.hidden = false; ov.focus();
+    $('#rhythmCancel').onclick = () => end(null);
+    ov.onkeydown = (e) => { if (e.key === 'Escape') end(null); };
+    const arm = () => {
+      beats.textContent = '';
+      cap = TapRhythm.capture(ov, async (times) => {
+        cap = null;
+        if (!validBeats(times)) { await vprompt('not_understood'); if (!closed) arm(); return; }
+        const r = RhythmMath.ratios(times); TapRhythm.save(r); end(r);
+      }, (n) => { beats.textContent = '●'.repeat(n); });
+    };
+    arm();
+  });
+}
+
+// ---------- Silent authorization gate: rhythm, Touch ID/biometrics, or PIN pad ----------
+const A = { open: false, done: false, pin: '', cap: null, resolve: null };
+const authDots = () => document.querySelectorAll('#authDots i').forEach((d, i) => d.classList.toggle('f', i < A.pin.length));
+function authClose(ok) {
+  if (!A.open) return;
+  A.open = false; A.cap && A.cap.cancel(); A.cap = null; $('#authOv').hidden = true; Voice.resume();
+  const r = A.resolve; A.resolve = null; r && r(ok);
+}
+async function authSucceed() {
+  if (A.done) return;
+  A.done = true; A.cap && A.cap.cancel(); A.cap = null; buzz([100, 50, 100]);
+  await vprompt('auth_verified');
+  authClose(true);
+}
+async function authFail(msg) {
+  if (A.done || !A.open) return;
+  $('#authMsg').textContent = msg; A.pin = ''; authDots(); buzz([200, 80, 200]);
+  const ov = $('#authOv'); ov.classList.remove('shake'); void ov.offsetWidth; ov.classList.add('shake');
+  await vprompt('auth_failed');
+  authArm();
+}
+function authArm() {
+  if (!A.open || A.done) return;
+  $('#authBeats').textContent = '';
+  A.cap = TapRhythm.capture($('#authOv'), (times) => {
+    A.cap = null;
+    if (validBeats(times) && RhythmMath.match(RhythmMath.ratios(times), TapRhythm.load())) authSucceed();
+    else authFail('Rhythm not recognized.');
+  }, (n) => { $('#authBeats').textContent = '●'.repeat(n); });
+}
+function authorize() {
+  if (A.open) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    A.open = true; A.done = false; A.pin = ''; A.resolve = resolve; authDots();
+    $('#authMsg').textContent = ''; $('#authBio').disabled = !bioOk;
+    $('#authOv').hidden = false; $('#authOv').focus();
+    Voice.pause(); authArm(); playVoicePrompt('ask_auth');
+  });
+}
+['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'B'].forEach((k) => {
+  if (k === '') { $('#authPad').append(document.createElement('span')); return; }
+  const b = el('button', '', k === 'B' ? '⌫' : k);
+  b.type = 'button';
+  b.setAttribute('aria-label', k === 'B' ? 'Delete last digit' : 'Digit ' + k);
+  b.onclick = () => {
+    if (!A.open || A.done) return;
+    triggerTactilePulse();
+    if (k === 'B') A.pin = A.pin.slice(0, -1); else if (A.pin.length < 4) A.pin += k;
+    authDots();
+    if (A.pin.length === 4) { if (A.pin === getPin()) authSucceed(); else authFail('Wrong PIN.'); }
+  };
+  $('#authPad').append(b);
+});
+$('#authBio').onclick = async () => {
+  if (!bioOk) { $('#authMsg').textContent = 'Touch ID is not available on this device.'; return; }
+  try { if (store.get(CRED_KEY)) await verifyTouchId(); else await registerTouchId(); authSucceed(); }
+  catch (e) { if (e && e.name === 'NotAllowedError') $('#authMsg').textContent = 'Touch ID was cancelled.'; else authFail('Touch ID did not work.'); }
+};
+$('#authCancel').onclick = () => authClose(false);
+$('#authOv').addEventListener('keydown', (e) => { if (e.key === 'Escape') authClose(false); });
+
+// ---------- Owner actions driven by voice ----------
+async function withOwner(fn) { // owner commands need the owner dashboard and an unlocked vault
+  if (state.role !== 'owner' || state.screen !== 's-owner') { await vprompt('not_understood'); return; }
+  if (!$('#vault').classList.contains('open')) { if (!(await authorize())) return; setLocked(false); }
+  await fn();
+}
+async function setLimit(n) {
+  const inp = $('#o-custom'); inp.value = String(n); inp.dispatchEvent(new Event('input')); // reuses the manual input's own handler
+  await vprompt('limit_updated', String(n));
+}
+async function doLimit(n) { if (n == null || n < 1 || n > 50) { await vprompt('not_understood'); return; } await setLimit(n); }
+async function doSeller(spoken) {
+  const r = resolveRecipient(spoken);
+  if (!r) { await vprompt('not_understood'); return; }
+  oSeller.value = r.wallet; store.set('th_seller_wallet', r.wallet); rememberWallet(r.wallet, r.name);
+  await vspeak(r.name); // read the recipient back so a mis-heard name is caught
+  await vprompt('ask_limit');
+  const heard = await listenOnce(9000);
+  const n = heard ? parseAmount(heard) : null;
+  if (n != null && n >= 1 && n <= 50) await setLimit(n); else await vprompt('not_understood');
+}
+async function doStatus() {
+  const s = state.s || {}, fresh = !s.status || s.status === 'NONE';
+  const wallet = fresh ? oSeller.value : s.seller, c = contactByWallet(wallet);
+  const word = { ACTIVE: 'active', NONE: 'not started', PENDING: 'waiting for approval', REVOKED: 'stopped', AUTO_LOCKED: 'locked after the first payment' }[s.status || 'NONE'] || 'unknown';
+  await vspeak(`Your limit is ${fresh ? state.cap : s.cap} euros. Recipient ${c ? c.name : handleOf(wallet)}. Session ${word}.`);
+}
+async function doLock() { // Single-Errand Auto-Lock's manual twin: revoke the grant right now
+  if (state.role !== 'owner') { await vprompt('not_understood'); return; }
+  const { data } = await api('/api/revoke', {});
+  if (data && data.status) { state.s = data; if (state.screen === 's-owner') renderOwner(); }
+  buzz([200, 80, 200]);
+  await vprompt('errand_locked');
+}
+async function generateErrandCode() {
+  const a = (state.s && state.s.ownerAccount) || {};
+  const { status, data } = await api('/api/owner/setup', { name: a.name, walletAddress: a.walletAddress || '', helperNames: [], regenerate: true });
+  if (status !== 200) { await vprompt('not_understood'); return; }
+  store.set('th_pair', data.ownerAccount.pairCode); state.s.ownerAccount = data.ownerAccount; state.s.helpers = data.helpers;
+  if (state.screen === 's-owner') renderOwner();
+  await vprompt('code_ready');
+  await vreadCode();
+}
+async function doGenerate() {
+  if (state.role !== 'owner' || state.screen !== 's-owner') { await vprompt('not_understood'); return; }
+  if (!(await authorize())) return; // always silent-check, even when the vault is already open
+  setLocked(false);
+  await generateErrandCode();
+}
+$('#genCodeBtn').onclick = doGenerate;
+
+// ---------- Guided voice registration ----------
+let regBusy = false;
+async function registerByVoice() {
+  if (regBusy) return;
+  if (!SR) { setStatus('Voice registration needs Chrome, Edge or Safari. Use the form instead.'); return; }
+  regBusy = true;
+  try {
+    const nameHeard = await askText('ask_name'); if (!nameHeard) return;
+    const name = titleCase(nameHeard.replace(/^(?:my name is|i am|i'm|it is|it's)\s+/i, ''));
+    $('#suName').value = name; await vspeak(name);
+    const walletHeard = await askText('ask_wallet'); if (!walletHeard) return;
+    const rec = resolveRecipient(walletHeard.replace(/^(?:my wallet is|it is|it's)\s+/i, ''));
+    if (!rec) { await vprompt('not_understood'); return; }
+    ownerInput.value = rec.wallet; store.set('th_owner_wallet', rec.wallet); rememberWallet(rec.wallet, rec.name);
+    await vspeak(handleOf(rec.wallet));
+    await vprompt('record_rhythm');
+    if (!(await recordRhythm())) return;
+    await vprompt('rhythm_saved');
+    await vprompt('ask_confirm');
+    const c = await listenOnce(10000);
+    if (!c || !/\b(confirm|yes|submit|okay|ok)\b/i.test(c)) { await vprompt('not_understood'); return; }
+    await $('#suConfirm').onclick(); // the normal Confirm button: validates and saves
+    if (su.step !== 2) return;
+    await suToStep3(false);         // creates the account and the pairing code
+    if (su.step === 3) { await vprompt('code_ready'); await vreadCode(); }
+  } finally { regBusy = false; }
+}
+$('#suVoiceReg').onclick = registerByVoice;
+$('#suRhythm').onclick = async () => { if (await recordRhythm()) await vprompt('rhythm_saved'); };
+
+// ---------- Command router ----------
+let cmdBusy = false;
+async function handleCommand(raw) {
+  if (cmdBusy) return;
+  cmdBusy = true;
+  try {
+    const it = parseIntent(raw, state.screen);
+    switch (it.type) {
+      case 'sleep': voiceStop(); triggerTactilePulse(); setStatus('Listening stopped. Double-tap or press Space to resume.'); break;
+      case 'role': pickRole(it.role); break;
+      case 'register': await registerByVoice(); break;
+      case 'myname': $('#hName').value = titleCase(it.name); triggerTactilePulse(); break;
+      case 'connect': $('#hConnect').click(); break;
+      case 'code':
+        if (it.digits.length === 6) { $('#hCode').value = it.digits; triggerTactilePulse(); setStatus('Pairing code filled in'); }
+        else await vprompt('not_understood');
+        break;
+      case 'generate': await doGenerate(); break;
+      case 'lock': await doLock(); break;
+      case 'status': await withOwner(doStatus); break;
+      case 'limit': await withOwner(() => doLimit(it.n)); break;
+      case 'seller': await withOwner(() => doSeller(it.name)); break;
+      default:
+        if (raw.trim().length > 2 && Date.now() - Voice.lastNU > 4000) { Voice.lastNU = Date.now(); await vprompt('not_understood'); }
+    }
+  } catch (e) { console.warn('Voice command failed:', e); }
+  finally { cmdBusy = false; }
+}
+
+// ---------- Zero-aim triggers: double-tap anywhere, or Space ----------
+const INTERACTIVE = 'input,textarea,select,button,a,label,[role=button],[role=switch],[contenteditable],#authOv,#rhythmOv,[data-nobeat]';
+const isInteractive = (t) => !!(t && t.closest && t.closest(INTERACTIVE));
+let gestureDone = false, lastTap = { t: 0, x: 0, y: 0 };
+function toggleMic() {
+  gestureDone = true; triggerTactilePulse();
+  if (Voice.on) { voiceStop(); setStatus('Listening stopped'); return; }
+  if (!voiceStart()) return;
+  if (!Voice.welcomed) { Voice.welcomed = true; vprompt('welcome'); }
+}
+document.addEventListener('pointerdown', (e) => {
+  if (TapRhythm.active || isInteractive(e.target) || (e.pointerType === 'mouse' && e.button > 0)) return;
+  const now = Date.now();
+  if (now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 40) { lastTap.t = 0; toggleMic(); }
+  else lastTap = { t: now, x: e.clientX, y: e.clientY };
+});
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space' || e.repeat || TapRhythm.active || isInteractive(e.target)) return;
+  e.preventDefault(); toggleMic();
+});
+$('#micBtn').addEventListener('click', toggleMic);
+
+// ---------- Auto-activation ----------
+function firstGesture(e) {
+  if (gestureDone) return;
+  if (e && e.target && e.target.closest && e.target.closest('#micBtn')) return; // the button handles its own click
+  gestureDone = true;
+  if (!Voice.welcomed) { Voice.welcomed = true; vprompt('welcome'); }
+  if (!Voice.on) voiceStart();
+}
+['pointerdown', 'touchstart', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, firstGesture, { once: true, passive: true }));
+
+renderBook();
+updateMic();
+if (SR) voiceStart(); // try right away; if the browser wants a gesture first, the listeners above take over
+else setStatus('Voice commands need Chrome, Edge or Safari. Everything still works with the buttons.');
+})();
 </script>
 </body>
 </html>
